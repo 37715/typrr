@@ -1,11 +1,50 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Trophy, User } from 'lucide-react';
 import GlassAuthModal from '@/components/ui/auth-model';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { LeaderboardModal } from '@/components/ui/leaderboard-modal';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/components/ui/toast';
 
 export const Header: React.FC = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [lbOpen, setLbOpen] = useState(false);
+  const toast = useToast();
+
+  useEffect(() => {
+    // detect session on load and subscribe to changes (works after OAuth redirect)
+    supabase.auth.getUser().then(({ data }) => {
+      const authed = !!data.user;
+      setIsSignedIn(authed);
+      // If returning from OAuth (code in URL) and authenticated, show success and clean URL
+      const params = new URLSearchParams(window.location.search);
+      const fromOauth = params.get('from') === 'oauth';
+      if (fromOauth && authed) {
+        toast({ variant: 'success', title: 'signed in' });
+        const url = new URL(window.location.href);
+        url.search = '';
+        window.history.replaceState({}, '', url.toString());
+      } else if (fromOauth && !authed) {
+        toast({ variant: 'error', title: 'sign in failed', description: 'please try again' });
+        const url = new URL(window.location.href);
+        url.search = '';
+        window.history.replaceState({}, '', url.toString());
+        setAuthOpen(true);
+      }
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      const authed = !!session?.user;
+      setIsSignedIn(authed);
+      if (authed) {
+        // close modal but avoid redirect/toast spam on normal navigation
+        setAuthOpen(false);
+      }
+    });
+    return () => {
+      sub.subscription.unsubscribe();
+    };
+  }, []);
   return (
     <header className="w-full lowercase bg-white/60 dark:bg-zinc-950/60 backdrop-blur-sm border-b border-zinc-200 dark:border-zinc-800 transition-colors duration-300">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -29,30 +68,32 @@ export const Header: React.FC = () => {
           </nav>
 
           <div className="flex items-center space-x-2 justify-end">
-            <button className="p-2 text-zinc-500 rounded-lg transition-colors duration-200 hover:bg-black hover:text-white dark:text-zinc-400 dark:hover:bg-white dark:hover:text-zinc-900" aria-label="trophies">
+            <button onClick={() => setLbOpen(true)} className="p-2 text-zinc-500 rounded-lg transition-colors duration-200 hover:bg-black hover:text-white dark:text-zinc-400 dark:hover:bg-white dark:hover:text-zinc-900" aria-label="trophies">
               <Trophy className="w-5 h-5" />
             </button>
-            <button
-              onClick={() => {
-                if (!isSignedIn) setAuthOpen(true);
+            <a
+              href="/profile"
+              onClick={async (e) => {
+                e.preventDefault();
+                const { data } = await supabase.auth.getUser();
+                if (data.user) {
+                  window.location.href = '/profile';
+                } else {
+                  setAuthOpen(true);
+                }
               }}
               className="p-2 text-zinc-500 rounded-lg transition-colors duration-200 hover:bg-black hover:text-white dark:text-zinc-400 dark:hover:bg-white dark:hover:text-zinc-900"
               aria-label="profile"
             >
               <User className="w-5 h-5" />
-            </button>
+            </a>
             <GlassAuthModal
               open={authOpen}
               onOpenChange={setAuthOpen}
-              onLogin={() => {
-                setIsSignedIn(true);
-                setAuthOpen(false);
-              }}
-              onSignup={() => {
-                setIsSignedIn(true);
-                setAuthOpen(false);
-              }}
+              onLogin={() => setAuthOpen(false)}
+              onSignup={() => setAuthOpen(false)}
             />
+            <LeaderboardModal open={lbOpen} onOpenChange={setLbOpen} />
           </div>
         </div>
       </div>

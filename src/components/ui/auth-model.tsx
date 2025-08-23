@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Github } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/components/ui/toast';
 
 type Provider = 'google' | 'github' | 'x';
 
@@ -35,6 +37,7 @@ export default function GlassAuthModal({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   const modalRef = useRef<HTMLDivElement | null>(null);
   const firstFieldRef = useRef<HTMLInputElement | null>(null);
@@ -79,8 +82,10 @@ export default function GlassAuthModal({
         await onSignup?.({ name, email, password });
       }
       if (onLogin || onSignup) handleClose();
+      toast({ variant: 'success', title: mode === 'login' ? 'signed in' : 'account created' });
     } catch (err) {
       console.error(err);
+      toast({ variant: 'error', title: 'auth error', description: 'please try again.' });
     } finally {
       setLoading(false);
     }
@@ -90,10 +95,18 @@ export default function GlassAuthModal({
     if (loading) return;
     setLoading(true);
     try {
-      await onSocial?.(provider);
-      if (onSocial) handleClose();
+      if (onSocial) {
+        await onSocial(provider);
+      } else {
+        await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: `${window.location.origin}/profile?from=oauth` } });
+      }
+      if (onSocial) {
+        handleClose();
+        toast({ variant: 'success', title: `${provider} sign-in started` });
+      }
     } catch (err) {
       console.error(err);
+      toast({ variant: 'error', title: 'auth error', description: 'oauth failed to start' });
     } finally {
       setLoading(false);
     }
@@ -165,16 +178,7 @@ export default function GlassAuthModal({
                 </h2>
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <SocialButton
-                    label="google"
-                    onClick={() => handleSocial('google')}
-                    Icon={
-                      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-zinc-900 dark:text-white">
-                        <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.08" />
-                        <text x="12" y="16" textAnchor="middle" fontSize="12" fill="currentColor" fontWeight="700">G</text>
-                      </svg>
-                    }
-                  />
+                  <SocialButton label="google" onClick={() => handleSocial('google')} />
                   <SocialButton
                     label="github"
                     onClick={() => handleSocial('github')}

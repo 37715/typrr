@@ -4,6 +4,7 @@ import { Footer } from './components/Footer';
 import { CodeTypingPanel } from './components/CodeTypingPanel';
 import { codeSnippets } from './data/snippets';
 import { Routes, Route, useLocation, Link, Navigate } from 'react-router-dom';
+import { Profile } from './components/Profile';
 
 function App() {
   const [currentSnippetIndex, setCurrentSnippetIndex] = useState(0);
@@ -52,6 +53,7 @@ function App() {
                 />
               </>
             } />
+            <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<Navigate to="/daily" replace />} />
           </Routes>
         </div>
