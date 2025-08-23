@@ -11,13 +11,22 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
+    // on mount, restore persisted theme
+    const stored = localStorage.getItem('typrr_theme');
+    if (stored === 'light') setIsDark(false);
+    if (stored === 'dark') setIsDark(true);
+  }, []);
+
+  useEffect(() => {
     const root = document.documentElement;
     if (isDark) {
       root.classList.add("dark");
       root.classList.remove("light");
+      localStorage.setItem('typrr_theme', 'dark');
     } else {
       root.classList.remove("dark");
       root.classList.add("light");
+      localStorage.setItem('typrr_theme', 'light');
     }
   }, [isDark]);
 

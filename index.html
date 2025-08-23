@@ -15,6 +15,21 @@
     <meta name="twitter:description" content="daily code typing racer — same snippet for everyone, three attempts. practice anytime." />
     <meta name="twitter:image" content="/og-card.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('typrr_theme');
+          var dark = t ? (t === 'dark') : window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (dark) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {
+          // ignore
+        }
+      })();
+    </script>
     <title>typrr</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -54,7 +54,7 @@ export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [] 
                   className={`px-3 py-1.5 rounded-full text-sm transition ${tab === 'alltime' ? 'bg-white text-zinc-900 dark:bg-white/90' : 'text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white'}`}
                   onClick={() => setTab('alltime')}
                 >
-                  all-time
+                  hall of fame
                 </button>
               </div>
               <button

@@ -34,6 +34,11 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   const [attemptsRemaining, setAttemptsRemaining] = useState<number>(3);
   const [attemptRecorded, setAttemptRecorded] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
+  const [autoNext, setAutoNext] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('typrr_auto_next') === '1';
+    } catch { return false; }
+  });
 
   const startTimestampRef = useRef<number>(0);
   const totalCharsTyped = userInput.length;
@@ -318,11 +323,21 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
       </div>
 
       {/* controls */}
-      <div className="mt-8 flex justify-center">
+      <div className="mt-8 flex flex-col items-center gap-4">
         {isDailyMode ? (
           <GetStartedButton onClick={() => setLbOpen(true)} label="leaderboard" />
         ) : (
           <GetStartedButton onClick={handleRefresh} />
+        )}
+        {!isDailyMode && (
+          <button
+            onClick={() => {
+              const next = !autoNext; setAutoNext(next); try { localStorage.setItem('typrr_auto_next', next ? '1' : '0'); } catch {}
+            }}
+            className={`px-4 py-2 rounded-xl border text-sm transition-colors ${autoNext ? 'border-emerald-400 bg-emerald-500/15 text-emerald-300' : 'border-zinc-300 bg-white/10 text-zinc-400 dark:border-zinc-700'}`}
+          >
+            {autoNext ? 'auto-next: on' : 'auto-next: off'}
+          </button>
         )}
       </div>
 
@@ -342,6 +357,11 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
             <span className="text-base font-medium">challenge complete</span>
           </div>
         </div>
+      )}
+
+      {/* auto-next handler for practice */}
+      {!isDailyMode && isComplete && autoNext && (
+        <span className="sr-only" aria-hidden="true">{setTimeout(() => handleRefresh(), 350)}</span>
       )}
     </div>
   );
