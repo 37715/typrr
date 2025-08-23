@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { GetStartedButton } from '@/components/ui/get-started-button';
+import { LeaderboardModal } from '@/components/ui/leaderboard-modal';
 
 interface CodeTypingPanelProps {
   snippet: string;
@@ -24,6 +25,15 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const snippetLines = snippet.split('\n');
+  const isDailyMode = typeof window !== 'undefined' && !window.location.pathname.includes('practice');
+  const todayKey = useMemo(() => {
+    const d = new Date();
+    const iso = d.toISOString().slice(0, 10);
+    return `typrr_daily_attempts_${iso}`;
+  }, []);
+  const [attemptsRemaining, setAttemptsRemaining] = useState<number>(3);
+  const [attemptRecorded, setAttemptRecorded] = useState(false);
+  const [lbOpen, setLbOpen] = useState(false);
 
   const startTimestampRef = useRef<number>(0);
   const totalCharsTyped = userInput.length;
@@ -64,6 +74,32 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snippet]);
+
+  // Initialize attempts from localStorage for daily mode
+  useEffect(() => {
+    if (!isDailyMode) return;
+    const raw = localStorage.getItem(todayKey);
+    const val = raw ? parseInt(raw, 10) : 3;
+    if (Number.isNaN(val)) {
+      setAttemptsRemaining(3);
+      localStorage.setItem(todayKey, '3');
+    } else {
+      setAttemptsRemaining(val);
+    }
+  }, [isDailyMode, todayKey]);
+
+  // When a daily attempt completes once, decrement
+  useEffect(() => {
+    if (!isDailyMode) return;
+    if (!isComplete) return;
+    if (attemptRecorded) return;
+    setAttemptRecorded(true);
+    setAttemptsRemaining(prev => {
+      const next = Math.max(0, prev - 1);
+      localStorage.setItem(todayKey, String(next));
+      return next;
+    });
+  }, [isComplete, attemptRecorded, isDailyMode, todayKey]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     // Normalize Windows CRLF to LF to match snippet formatting
@@ -203,14 +239,22 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     onRefresh();
   };
 
+  const isLocked = isDailyMode && attemptsRemaining <= 0;
+
   return (
-    <div className="w-full max-w-4xl mx-auto lowercase">
-      <div className="bg-zinc-50 dark:bg-zinc-900/90 backdrop-blur-sm rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden transition-colors duration-300">
+    <div className="w-full max-w-4xl mx-auto lowercase relative">
+      {isDailyMode && (
+        <div className="text-center text-zinc-700 dark:text-zinc-300 mb-3">daily challenge</div>
+      )}
+      {isDailyMode && (
+        <div className="pointer-events-none absolute -inset-x-8 -inset-y-6 rounded-[2rem] bg-gradient-to-r from-blue-500/15 via-purple-500/15 to-blue-500/15 blur-3xl" />
+      )}
+      <div className="bg-zinc-50 dark:bg-zinc-900/90 backdrop-blur-sm rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden transition-colors duration-300 relative">
         {/* centered WPM header with mode badge */}
         <div className="relative flex items-center justify-center px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-950/60 transition-colors duration-300">
           <div className="text-2xl font-mono text-zinc-900 dark:text-white">{isComplete ? wpm.toFixed(0) : Math.max(0, Math.floor(wpm)).toString()} wpm</div>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300">
-            <span className="lowercase">{window.location.pathname.includes('practice') ? 'practice' : 'daily challenge'}</span>
+            <span className="lowercase">{isDailyMode ? `${attemptsRemaining} attempts left` : 'practice'}</span>
           </div>
         </div>
         {/* Code Panel */}
@@ -248,7 +292,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="off"
-                disabled={isComplete}
+                disabled={isComplete || isLocked}
                 placeholder=""
               />
             </div>
@@ -275,10 +319,24 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
 
       {/* controls */}
       <div className="mt-8 flex justify-center">
-        <GetStartedButton onClick={handleRefresh} />
+        {isDailyMode ? (
+          <GetStartedButton onClick={() => setLbOpen(true)} label="leaderboard" />
+        ) : (
+          <GetStartedButton onClick={handleRefresh} />
+        )}
       </div>
 
-      {isComplete && (
+      <LeaderboardModal open={lbOpen} onOpenChange={setLbOpen} />
+
+      {isLocked && (
+        <div className="mt-6 text-center">
+          <div className="inline-flex items-center space-x-2 bg-zinc-200/40 text-zinc-700 px-4 py-2 rounded-lg border border-zinc-300 dark:bg-zinc-800/40 dark:text-zinc-200 dark:border-zinc-700">
+            <span className="text-sm font-medium">no attempts left · come back tomorrow</span>
+          </div>
+        </div>
+      )}
+
+      {isComplete && !isLocked && (
         <div className="mt-6 text-center">
           <div className="inline-flex items-center space-x-2 px-5 py-3 rounded-lg border lowercase bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-green-500/20 dark:text-green-300 dark:border-green-500/30">
             <span className="text-base font-medium">challenge complete</span>
