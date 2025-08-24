@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { GetStartedButton } from '@/components/ui/get-started-button';
 import { LeaderboardModal } from '@/components/ui/leaderboard-modal';
+import { supabase } from '@/lib/supabase';
 
 interface CodeTypingPanelProps {
   snippet: string;
@@ -243,6 +244,32 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   const handleRefresh = () => {
     onRefresh();
   };
+
+  // Submit attempt to server when complete
+  useEffect(() => {
+    if (!isComplete) return;
+    const submit = async () => {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        const token = session.session?.access_token;
+        // Derive simple accuracy: correct chars / total
+        let correct = 0; for (let i = 0; i < userInput.length; i++) if (userInput[i] === snippet[i]) correct++;
+        const accuracy = userInput.length ? (correct / userInput.length) * 100 : 0;
+        const mode = isDailyMode ? 'daily' : 'practice';
+
+        const snippetId = (window as any).__CURRENT_SNIPPET_ID__;
+        if (!snippetId) return;
+
+        await fetch('/api/attempt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({ snippet_id: snippetId, mode, elapsed_ms: Math.round((totalWordsTyped / (wpm || 1)) * 60000), wpm: Math.round(wpm), accuracy: Math.round(accuracy * 100) / 100 })
+        });
+      } catch {}
+    };
+    submit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isComplete]);
 
   const isLocked = isDailyMode && attemptsRemaining <= 0;
 
