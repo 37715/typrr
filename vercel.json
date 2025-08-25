@@ -1,6 +1,7 @@
 {
   "rewrites": [
-    { "source": "/((?!.*\\..*|_next).*)", "destination": "/" }
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/((?!api|_next/|.*\\..*).*)", "destination": "/" }
   ]
 }
 
