@@ -1,9 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
-    const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) as string;
-    const anon = (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY) as string;
+    const url = process.env.SUPABASE_URL as string;
+    const anon = process.env.SUPABASE_ANON_KEY as string;
     if (!url) return res.status(500).json({ error: 'supabaseUrl is required.' });
     if (!anon) return res.status(500).json({ error: 'supabaseAnonKey is required.' });
     const supabase = createClient(url, anon, {
@@ -21,7 +35,11 @@ export default async function handler(req: any, res: any) {
     const pick = data[Math.floor(Math.random() * data.length)];
     return res.status(200).json({ snippet: pick });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message || 'server error' });
+    console.error('Practice API error:', err);
+    return res.status(500).json({ 
+      error: err.message || 'server error',
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
   }
 }
 

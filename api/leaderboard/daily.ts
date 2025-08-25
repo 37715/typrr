@@ -1,9 +1,10 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getServerClient } from '../_supabase';
+import { createClient } from '@supabase/supabase-js';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   try {
-    const supabase = getServerClient(req);
+    const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) as string;
+    const anon = (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY) as string;
+    const supabase = createClient(url, anon, { auth: { persistSession: false } });
     const today = new Date().toISOString().slice(0, 10);
     const { data: dc, error: e1 } = await supabase
       .from('daily_challenges')

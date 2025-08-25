@@ -3,16 +3,25 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { CodeTypingPanel } from './components/CodeTypingPanel';
 import { codeSnippets } from './data/snippets';
-import { Routes, Route, useLocation, Link, Navigate } from 'react-router-dom';
-import { supabase } from './lib/supabase';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Profile } from './components/Profile';
 
 function App() {
   const [currentSnippetIndex, setCurrentSnippetIndex] = useState(0);
+  const [snippetContent, setSnippetContent] = useState<string>('');
+  const [snippetId, setSnippetId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const currentSnippet = codeSnippets[currentSnippetIndex];
-  const [snippetContent, setSnippetContent] = useState<string>(currentSnippet);
-  const [snippetId, setSnippetId] = useState<string | null>(null);
+
+  // Function to normalize snippet content - handles escaped newlines and Windows line endings
+  const normalizeSnippetContent = (content: string): string => {
+    return content
+      .replace(/\\n/g, '\n')  // Convert escaped newlines to actual newlines
+      .replace(/\r\n/g, '\n') // Convert Windows line endings to Unix
+      .replace(/\r/g, '\n');  // Convert old Mac line endings to Unix
+  };
 
   const handleTypingStart = () => {};
 
@@ -21,53 +30,64 @@ function App() {
   const handleReset = () => {};
 
   const handleRefresh = () => {
-    const nextIndex = (currentSnippetIndex + 1) % codeSnippets.length;
-    setCurrentSnippetIndex(nextIndex);
+    if (window.location.pathname.includes('practice')) {
+      // For practice mode, just trigger a reload by updating the index
+      const nextIndex = (currentSnippetIndex + 1) % codeSnippets.length;
+      setCurrentSnippetIndex(nextIndex);
+    } else {
+      // For daily mode, just reload the same daily challenge
+      setCurrentSnippetIndex(currentSnippetIndex);
+    }
   };
 
-  const isPractice = typeof window !== 'undefined' && window.location.pathname.includes('practice');
-
-  async function authHeader() {
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      return token ? { Authorization: `Bearer ${token}` } : {};
-    } catch {
-      return {};
-    }
-  }
-
   useEffect(() => {
-    const load = async () => {
-      if (isPractice) {
-        const r = await fetch('/api/practice/random');
-        if (r.ok) {
-          const j = await r.json();
-          setSnippetId(j.snippet.id);
-          setSnippetContent(j.snippet.content);
-          (window as any).__CURRENT_SNIPPET_ID__ = j.snippet.id;
+    const loadSnippet = async () => {
+      try {
+        setIsLoading(true);
+        setApiError(null);
+        const isPractice = window.location.pathname.includes('practice');
+        
+        const endpoint = isPractice ? '/api/practice/random' : '/api/daily';
+        const response = await fetch(endpoint);
+        
+        if (response.ok) {
+          const data = await response.json();
+          const normalizedContent = normalizeSnippetContent(data.snippet.content);
+          setSnippetContent(normalizedContent);
+          setSnippetId(data.snippet.id);
         } else {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          setApiError(`API Error: ${errorData.error}`);
+          console.warn(`API ${endpoint} failed:`, errorData);
+          setSnippetContent(normalizeSnippetContent(currentSnippet));
           setSnippetId(null);
-          setSnippetContent(currentSnippet);
-          (window as any).__CURRENT_SNIPPET_ID__ = null;
         }
-      } else {
-        const r = await fetch('/api/daily', { headers: await authHeader() });
-        if (r.ok) {
-          const j = await r.json();
-          setSnippetId(j.snippet.id);
-          setSnippetContent(j.snippet.content);
-          (window as any).__CURRENT_SNIPPET_ID__ = j.snippet.id;
-        } else {
-          setSnippetId(null);
-          setSnippetContent(currentSnippet);
-          (window as any).__CURRENT_SNIPPET_ID__ = null;
-        }
+      } catch (error) {
+        console.error('Failed to load snippet:', error);
+        setApiError('Failed to connect to API - using fallback snippet');
+        setSnippetContent(normalizeSnippetContent(currentSnippet));
+        setSnippetId(null);
+      } finally {
+        setIsLoading(false);
       }
     };
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPractice, currentSnippetIndex]);
+
+    loadSnippet();
+  }, [currentSnippetIndex, currentSnippet]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col lowercase bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 transition-colors duration-300">
+        <Header />
+        <main className="flex-1 flex flex-col items-center justify-center px-4">
+          <div className="text-center">
+            <div className="text-xl text-zinc-600 dark:text-zinc-400">loading challenge...</div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col lowercase bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 transition-colors duration-300">
@@ -79,6 +99,11 @@ function App() {
             <Route path="/daily" element={
               <>
                 <div className="text-center text-zinc-700 dark:text-zinc-300 mb-2 sr-only">daily challenge</div>
+                {apiError && (
+                  <div className="text-center text-amber-600 dark:text-amber-400 text-sm mb-4 p-2 bg-amber-50 dark:bg-amber-900/20 rounded border">
+                    {apiError}
+                  </div>
+                )}
                 <CodeTypingPanel
                   snippet={snippetContent}
                   onComplete={handleTypingComplete}
@@ -91,6 +116,11 @@ function App() {
             <Route path="/practice" element={
               <>
                 <div className="text-center text-zinc-700 dark:text-zinc-300 mb-2 sr-only">practice</div>
+                {apiError && (
+                  <div className="text-center text-amber-600 dark:text-amber-400 text-sm mb-4 p-2 bg-amber-50 dark:bg-amber-900/20 rounded border">
+                    {apiError}
+                  </div>
+                )}
                 <CodeTypingPanel
                   snippet={snippetContent}
                   onComplete={handleTypingComplete}
