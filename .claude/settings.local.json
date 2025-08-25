@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(timeout 10 curl http://localhost:3000/api/daily)",
+      "Bash(timeout 10 curl http://localhost:3000/api/practice/random)",
+      "Bash(timeout 10 curl http://localhost:3001/api/practice/random)",
+      "Read(/C:\\Users\\ellis\\Desktop/**)",
+      "Bash(timeout 10 curl http://localhost:3001/api/daily)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": [],
+    "additionalDirectories": [
+      "C:\\"
+    ]
+  }
+}
