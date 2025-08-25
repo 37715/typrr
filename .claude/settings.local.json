@@ -9,7 +9,10 @@
       "Bash(timeout 10 curl http://localhost:3001/api/practice/random)",
       "Read(/C:\\Users\\ellis\\Desktop/**)",
       "Bash(timeout 10 curl http://localhost:3001/api/daily)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": [],
