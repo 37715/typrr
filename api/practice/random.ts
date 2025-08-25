@@ -1,9 +1,14 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getServerClient } from '../_supabase';
+import { createClient } from '@supabase/supabase-js';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   try {
-    const supabase = getServerClient(req);
+    const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) as string;
+    const anon = (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY) as string;
+    if (!url) return res.status(500).json({ error: 'supabaseUrl is required.' });
+    if (!anon) return res.status(500).json({ error: 'supabaseAnonKey is required.' });
+    const supabase = createClient(url, anon, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
     // Select a random practice snippet
     const { data, error } = await supabase
       .from('snippets')
