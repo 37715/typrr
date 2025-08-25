@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getServerClient } from './_supabase';
+import { getServerClient, getUtcDayBounds } from './_supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -19,7 +19,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .single();
     if (e2) throw e2;
 
-    return res.status(200).json({ date: dc.challenge_date, snippet });
+    // Optionally include attempts used for the authenticated user
+    let remaining: number | undefined = undefined;
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth.user) {
+        const { start, end } = getUtcDayBounds(new Date());
+        const { data: cnt, error: cntErr } = await supabase
+          .from('attempts')
+          .select('id', { head: true, count: 'exact' })
+          .eq('user_id', auth.user.id)
+          .eq('mode', 'daily')
+          .gte('created_at', start.toISOString())
+          .lt('created_at', end.toISOString());
+        if (cntErr) throw cntErr;
+        const c = (cnt as any)?.count ?? 0;
+        remaining = Math.max(0, 3 - c);
+      }
+    } catch {}
+
+    return res.status(200).json({ date: dc.challenge_date, snippet, remaining });
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'server error' });
   }

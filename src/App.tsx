@@ -4,6 +4,7 @@ import { Footer } from './components/Footer';
 import { CodeTypingPanel } from './components/CodeTypingPanel';
 import { codeSnippets } from './data/snippets';
 import { Routes, Route, useLocation, Link, Navigate } from 'react-router-dom';
+import { supabase } from './lib/supabase';
 import { Profile } from './components/Profile';
 
 function App() {
@@ -26,6 +27,16 @@ function App() {
 
   const isPractice = typeof window !== 'undefined' && window.location.pathname.includes('practice');
 
+  async function authHeader() {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    } catch {
+      return {};
+    }
+  }
+
   useEffect(() => {
     const load = async () => {
       if (isPractice) {
@@ -41,7 +52,7 @@ function App() {
           (window as any).__CURRENT_SNIPPET_ID__ = null;
         }
       } else {
-        const r = await fetch('/api/daily');
+        const r = await fetch('/api/daily', { headers: await authHeader() });
         if (r.ok) {
           const j = await r.json();
           setSnippetId(j.snippet.id);
