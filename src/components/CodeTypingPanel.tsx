@@ -70,16 +70,24 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     setUserInput('');
     setHasStarted(false);
     setIsComplete(false);
-    setIsFocused(false);
     startTimestampRef.current = 0;
     onReset();
 
-    // Focus the textarea
+    // Focus the textarea and set focused state
     if (textareaRef.current) {
       textareaRef.current.focus();
+      setIsFocused(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snippet]);
+
+  // Auto-focus on component mount
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      setIsFocused(true);
+    }
+  }, []);
 
   // Initialize attempts from localStorage for daily mode
   useEffect(() => {
@@ -118,7 +126,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     }
 
     // Prevent typing beyond the snippet length
-    if (value.length <= snippet.length) {
+    if (value.length <= snippet.length) {      
       setUserInput(value);
     }
   };
@@ -189,17 +197,78 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
       }
     }
 
-    // Prevent space from jumping to next line when the expected char is a newline
+    // Enhanced key handling for IDE-like behavior
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const cursorIndex = textarea.selectionStart ?? userInput.length;
+    
+    // Handle space key - prevent skipping newlines but allow wrong spaces
     if (e.key === ' ') {
-      const textarea = textareaRef.current;
-      if (!textarea) return;
-      const cursorIndex = textarea.selectionStart ?? userInput.length;
+      // If next expected character is newline, prevent space
       if (snippet[cursorIndex] === '\n') {
         e.preventDefault();
         return;
       }
     }
+    
+    // Prevent skipping newlines with regular characters
+    else if (e.key.length === 1 && e.key !== '\n') {
+      // If we're at a newline position and user is typing a regular character, prevent it
+      if (snippet[cursorIndex] === '\n') {
+        e.preventDefault();
+        return;
+      }
+      
+      // Allow typing wrong characters - they will be highlighted in red
+      // No need to prevent typing - just let it through for visual feedback
+    }
   };
+
+  // Temporarily disable to test jumping
+  // const isAtEndOfLine = useMemo(() => {
+  //   const cursorPos = userInput.length;
+  //   if (cursorPos >= snippet.length) return false;
+  //   
+  //   // Check if next character is newline or we're at the end
+  //   return snippet[cursorPos] === '\n';
+  // }, [userInput.length, snippet]);
+
+  // Helper function to check if current line is completed (all chars typed except newline)
+  const isLineCompleted = useMemo(() => {
+    const cursorPos = userInput.length;
+    if (cursorPos >= snippet.length) return false;
+    
+    // Must be at a newline position to show enter indicator
+    if (snippet[cursorPos] !== '\n') return false;
+    
+    // Find the start of current line
+    let lineStart = cursorPos;
+    while (lineStart > 0 && snippet[lineStart - 1] !== '\n') {
+      lineStart--;
+    }
+    
+    // Check if all characters from line start to cursor are typed correctly
+    for (let i = lineStart; i < cursorPos; i++) {
+      if (userInput[i] !== snippet[i]) return false;
+    }
+    
+    // Must have typed at least one character on this line to show enter
+    return cursorPos > lineStart;
+  }, [userInput, snippet]);
+
+  // Calculate enter hint position
+  const enterHintPosition = useMemo(() => {
+    if (!isLineCompleted || !isFocused || isComplete) return null;
+    
+    const lines = userInput.split('\n');
+    const currentLineIndex = lines.length - 1;
+    const currentLineLength = lines[currentLineIndex]?.length || 0;
+    
+    return {
+      left: `${32 + currentLineLength * 9.6 + 25}px`, // Move much further right to avoid overlap
+      top: `${32 + currentLineIndex * 28}px`
+    };
+  }, [isLineCompleted, isFocused, isComplete, userInput]);
 
   const renderCharacter = (char: string, index: number) => {
     const userChar = userInput[index];
@@ -228,15 +297,40 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         className += isLeadingIndent ? '' : ' dark:text-red-300 dark:bg-red-500/30 text-rose-700 bg-rose-200/50';
       }
     } else if (index === userInput.length) {
-      // Neutral current position indicator (subtle); pulsing only when focused
-      className += isFocused && !isComplete ? ' dark:bg-gray-400/25 bg-zinc-400/25 animate-pulse' : ' dark:bg-gray-500/10 bg-zinc-300/20';
+      // Enhanced cursor visibility - always show when focused with pulsing animation
+      if (isFocused && !isComplete) {
+        className += ' dark:bg-blue-500/40 bg-blue-500/40 animate-pulse';
+      } else {
+        className += ' dark:bg-gray-500/10 bg-zinc-300/20';
+      }
     } else {
       className += ' dark:text-gray-400 text-zinc-500';
     }
 
+    // Fixed cursor handling - consistent rendering for all characters
+    if (index === userInput.length && isFocused && !isComplete) {
+      // Special handling for newlines to make cursor visible on empty lines
+      if (char === '\n') {
+        return (
+          <span key={index} className={className + ' relative'}>
+            {char}
+            {/* Add a visible cursor indicator for newlines */}
+            <span className="absolute left-0 top-0 w-2 h-6 bg-blue-500/40 animate-pulse pointer-events-none" />
+          </span>
+        );
+      }
+      
+      // Use same structure for other characters
+      return (
+        <span key={index} className={className}>
+          {char === ' ' ? '\u00A0' : char}
+        </span>
+      );
+    }
+
     return (
       <span key={index} className={className}>
-        {char === ' ' ? '\u00A0' : char}
+        {char === ' ' ? '\u00A0' : char === '\n' ? char : char}
       </span>
     );
   };
@@ -307,6 +401,19 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
               <div className="absolute inset-0 p-8 font-mono no-liga text-lg leading-7 pointer-events-none z-0 whitespace-pre-wrap normal-case">
                 {snippet.split('').map((char, index) => renderCharacter(char, index))}
               </div>
+              
+              {/* Enter hint - positioned next to cursor */}
+              {enterHintPosition && (
+                <div 
+                  className="absolute pointer-events-none z-10 w-5 h-5 bg-blue-500/20 border border-blue-400/40 rounded flex items-center justify-center animate-fade-in"
+                  style={enterHintPosition}
+                >
+                  <span className="text-blue-600 dark:text-blue-400 text-xs">↵</span>
+                </div>
+              )}
+              
+              
+              
               
               <textarea
                 ref={textareaRef}
