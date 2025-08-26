@@ -23,13 +23,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const supabase = createClient(url, anon, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    // Select a random practice snippet
-    const { data, error } = await supabase
+    // Get language filter from query params
+    const { language } = req.query;
+    
+    // Build query for random practice snippet
+    let query = supabase
       .from('snippets')
       .select('id, language, content')
-      .eq('is_practice', true)
-      .order('created_at', { ascending: false })
-      .limit(50);
+      .eq('is_practice', true);
+    
+    // Add language filter if specified
+    if (language && language !== 'all') {
+      query = query.eq('language', language);
+    }
+    
+    const { data, error } = await query.limit(50);
     if (error) throw error;
     if (!data || data.length === 0) return res.status(404).json({ error: 'no practice snippets' });
     const pick = data[Math.floor(Math.random() * data.length)];

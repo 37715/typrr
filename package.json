@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "dev:api": "vercel dev --listen 3001",
+    "dev:api": "node dev-server.js",
+    "dev:vercel": "vercel dev --listen 3001",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -15,6 +16,8 @@
     "@supabase/supabase-js": "^2.56.0",
     "@vercel/node": "^2.3.0",
     "class-variance-authority": "^0.7.1",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",

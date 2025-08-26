@@ -2,18 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { CodeTypingPanel } from './components/CodeTypingPanel';
-import { codeSnippets } from './data/snippets';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Profile } from './components/Profile';
 
 function App() {
-  const [currentSnippetIndex, setCurrentSnippetIndex] = useState(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [snippetContent, setSnippetContent] = useState<string>('');
   const [snippetId, setSnippetId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-
-  const currentSnippet = codeSnippets[currentSnippetIndex];
 
   // Function to normalize snippet content - handles escaped newlines and Windows line endings
   const normalizeSnippetContent = (content: string): string => {
@@ -30,14 +27,8 @@ function App() {
   const handleReset = () => {};
 
   const handleRefresh = () => {
-    if (window.location.pathname.includes('practice')) {
-      // For practice mode, just trigger a reload by updating the index
-      const nextIndex = (currentSnippetIndex + 1) % codeSnippets.length;
-      setCurrentSnippetIndex(nextIndex);
-    } else {
-      // For daily mode, just reload the same daily challenge
-      setCurrentSnippetIndex(currentSnippetIndex);
-    }
+    // Trigger a reload by incrementing the refresh trigger
+    setRefreshTrigger(prev => prev + 1);
   };
 
   useEffect(() => {
@@ -57,15 +48,15 @@ function App() {
           setSnippetId(data.snippet.id);
         } else {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-          setApiError(`API Error: ${errorData.error}`);
+          setApiError(`API ${endpoint} failed: ${errorData.error}`);
           console.warn(`API ${endpoint} failed:`, errorData);
-          setSnippetContent(normalizeSnippetContent(currentSnippet));
+          setSnippetContent('');
           setSnippetId(null);
         }
       } catch (error) {
         console.error('Failed to load snippet:', error);
-        setApiError('Failed to connect to API - using fallback snippet');
-        setSnippetContent(normalizeSnippetContent(currentSnippet));
+        setApiError('Failed to connect to API');
+        setSnippetContent('');
         setSnippetId(null);
       } finally {
         setIsLoading(false);
@@ -73,7 +64,7 @@ function App() {
     };
 
     loadSnippet();
-  }, [currentSnippetIndex, currentSnippet]);
+  }, [refreshTrigger]);
 
   if (isLoading) {
     return (

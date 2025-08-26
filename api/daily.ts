@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .from('daily_challenges')
       .select('challenge_date, snippet_id')
       .eq('challenge_date', today)
-      .single();
+      .maybeSingle();
     if (e1) throw e1;
     if (!dc) return res.status(404).json({ error: 'no daily challenge' });
 
