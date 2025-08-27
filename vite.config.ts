@@ -19,9 +19,16 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+        rewrite: (path) => {
+          console.log('Proxying:', path);
+          return path;
+        },
         configure: (proxy, options) => {
           proxy.on('error', (err, req, res) => {
             console.log('API proxy error - run `npm run dev:api` in another terminal');
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('Proxying request:', req.method, req.url);
           });
         },
       },

@@ -98,7 +98,10 @@ export default function GlassAuthModal({
       if (onSocial) {
         await onSocial(provider);
       } else {
-        await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: `${window.location.origin}/profile?from=oauth` } });
+        const redirectUrl = window.location.origin.includes('localhost') 
+          ? `${window.location.origin}/profile?from=oauth`
+          : `${window.location.origin}/profile?from=oauth`;
+        await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: redirectUrl } });
       }
       if (onSocial) {
         handleClose();

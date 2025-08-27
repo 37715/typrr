@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 
 interface CodeTypingPanelProps {
   snippet: string;
+  snippetId: string | null;
   onComplete: () => void;
   onStart: () => void;
   onReset: () => void;
@@ -17,6 +18,7 @@ interface CodeTypingPanelProps {
 
 export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   snippet,
+  snippetId,
   onComplete,
   onStart,
   onReset,
@@ -382,25 +384,47 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
 
   // Submit attempt to server when complete
   useEffect(() => {
+    console.log('isComplete changed to:', isComplete);
     if (!isComplete) return;
+    
     const submit = async () => {
       try {
+        console.log('Starting attempt submission...');
         const { data: session } = await supabase.auth.getSession();
         const token = session.session?.access_token;
-        // Derive simple accuracy: correct chars / total
-        let correct = 0; for (let i = 0; i < userInput.length; i++) if (userInput[i] === snippet[i]) correct++;
-        const accuracy = userInput.length ? (correct / userInput.length) * 100 : 0;
+        console.log('Auth session:', session.session ? 'Found' : 'Not found');
+        console.log('Token:', token ? 'Present' : 'Missing');
+        
+        // Use our new non-recoverable accuracy calculation
+        const finalAccuracy = accuracy !== null ? accuracy : 0;
         const mode = isDailyMode ? 'daily' : 'practice';
 
-        const snippetId = (window as any).__CURRENT_SNIPPET_ID__;
-        if (!snippetId) return;
+        if (!snippetId) {
+          console.log('No snippetId, aborting');
+          return;
+        }
 
-        await fetch('/api/attempt', {
+        const attemptData = { 
+          snippet_id: snippetId, 
+          mode, 
+          elapsed_ms: Math.round((totalWordsTyped / (wpm || 1)) * 60000), 
+          wpm: Math.round(wpm), 
+          accuracy: Math.round(finalAccuracy * 100) / 100 
+        };
+        
+        console.log('Submitting attempt:', attemptData);
+        
+        const response = await fetch('/api/attempt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-          body: JSON.stringify({ snippet_id: snippetId, mode, elapsed_ms: Math.round((totalWordsTyped / (wpm || 1)) * 60000), wpm: Math.round(wpm), accuracy: Math.round(accuracy * 100) / 100 })
+          body: JSON.stringify(attemptData)
         });
-      } catch {}
+        
+        const result = await response.json();
+        console.log('Attempt response:', result);
+      } catch (error) {
+        console.error('Error submitting attempt:', error);
+      }
     };
     submit();
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -17,11 +17,35 @@ export const Profile: React.FC = () => {
       const user = data.user;
       setEmail(user?.email ?? '');
       setUsername(user?.user_metadata?.user_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'user');
-      // Placeholder averages; to be replaced with real query when attempts table exists
-      // Placeholder XP and averages until attempts table exists
-      setAvgWpm(null);
-      setAvgAcc(null);
-      setXp(0);
+      
+      if (user) {
+        // Fetch user stats from database
+        const { data: stats, error } = await supabase
+          .from('user_stats')
+          .select('avg_wpm, avg_accuracy, total_attempts')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (error) {
+          console.log('No stats found for user:', error);
+          setAvgWpm(null);
+          setAvgAcc(null);
+          setXp(0);
+        } else if (stats) {
+          console.log('User stats found:', stats);
+          setAvgWpm(stats.avg_wpm);
+          setAvgAcc(stats.avg_accuracy);
+          // Simple XP calculation based on attempts and performance
+          const xpFromPerformance = stats.avg_wpm * (stats.avg_accuracy / 100) * 10;
+          const xpFromAttempts = stats.total_attempts * 5;
+          setXp(Math.round(xpFromPerformance + xpFromAttempts));
+        } else {
+          console.log('Stats query returned no data');
+          setAvgWpm(null);
+          setAvgAcc(null);
+          setXp(0);
+        }
+      }
     })();
   }, []);
 

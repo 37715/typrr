@@ -2,12 +2,42 @@ import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
+  
   try {
-    const supabase = createClient(process.env.SUPABASE_URL as string, process.env.SUPABASE_ANON_KEY as string, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return res.status(401).json({ error: 'unauthorized' });
+    console.log('🎯 Vercel API endpoint hit!', req.body);
+    
+    // Get auth token from headers
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'unauthorized - no token' });
+    }
+    
+    // Use service role key for database operations
+    const supabase = createClient(
+      process.env.SUPABASE_URL as string, 
+      process.env.SUPABASE_SERVICE_ROLE_KEY as string, 
+      { auth: { persistSession: false } }
+    );
+    
+    // Verify user with anon key
+    const userClient = createClient(
+      process.env.SUPABASE_URL as string, 
+      process.env.SUPABASE_ANON_KEY as string, 
+      { 
+        auth: { persistSession: false },
+        global: { headers: { Authorization: `Bearer ${token}` } }
+      }
+    );
+    
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) {
+      console.log('Auth error:', authError);
+      return res.status(401).json({ error: 'unauthorized - invalid token' });
+    }
+    
+    console.log('Authenticated user:', user.id);
 
     const { snippet_id, mode, elapsed_ms, wpm, accuracy } = req.body || {};
     if (!snippet_id || !mode || elapsed_ms == null || wpm == null || accuracy == null) {
@@ -39,23 +69,26 @@ export default async function handler(req: any, res: any) {
       }
     }
 
-    const { data: inserted, error } = await supabase
+    // Insert attempt record - the trigger will automatically update user_stats
+    const { data, error } = await supabase
       .from('attempts')
       .insert({
-        user_id: auth.user.id,
+        user_id: user.id,
         snippet_id,
         mode,
-        elapsed_ms,
-        wpm,
-        accuracy,
-        started_at: new Date(),
-        finished_at: new Date(),
+        wpm: parseFloat(wpm),
+        accuracy: parseFloat(accuracy),
+        elapsed_ms: parseInt(elapsed_ms)
       })
-      .select('id')
+      .select()
       .single();
-    if (error) throw error;
+    
+    if (error) {
+      console.error('Insert attempt error:', error);
+      return res.status(500).json({ error: 'failed to store attempt' });
+    }
 
-    return res.status(200).json({ attempt_id: inserted.id });
+    return res.status(200).json({ success: true, attempt_id: data.id });
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'server error' });
   }

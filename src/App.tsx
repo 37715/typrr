@@ -109,6 +109,7 @@ function App() {
                 )}
                 <CodeTypingPanel
                   snippet={snippetContent}
+                  snippetId={snippetId}
                   onComplete={handleTypingComplete}
                   onStart={handleTypingStart}
                   onReset={handleReset}
@@ -126,6 +127,7 @@ function App() {
                 )}
                 <CodeTypingPanel
                   snippet={snippetContent}
+                  snippetId={snippetId}
                   onComplete={handleTypingComplete}
                   onStart={handleTypingStart}
                   onReset={handleReset}

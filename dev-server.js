@@ -30,6 +30,18 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 
+// Handle OPTIONS preflight requests
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.status(200).end();
+    return;
+  }
+  next();
+});
+
 // Simple daily challenge endpoint implementation
 app.get('/api/daily', async (req, res) => {
   // CORS headers
@@ -79,9 +91,92 @@ app.get('/api/daily', async (req, res) => {
   }
 });
 
-// Placeholder for other endpoints
-app.post('/api/attempt', (req, res) => {
-  res.status(200).json({ message: 'Attempt endpoint - placeholder' });
+// Store typing attempts
+app.post('/api/attempt', async (req, res) => {
+  console.log('🎯 Attempt endpoint hit!', req.body);
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    
+    const url = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!url) return res.status(500).json({ error: 'supabaseUrl is required.' });
+    if (!serviceKey) return res.status(500).json({ error: 'supabaseServiceKey is required.' });
+    
+    // Get auth token from request
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'unauthorized - no token' });
+    }
+    
+    // Create client with anon key to verify user token
+    const anonKey = process.env.SUPABASE_ANON_KEY;
+    const userClient = createClient(url, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    });
+    
+    // Verify user is authenticated
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) {
+      console.log('Auth error:', authError);
+      return res.status(401).json({ error: 'unauthorized - invalid token' });
+    }
+    
+    console.log('Authenticated user:', user.id);
+    
+    // Create service client for database operations
+    const supabase = createClient(url, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+    
+    const { snippet_id, mode, wpm, accuracy, elapsed_ms } = req.body;
+    
+    // Validate required fields
+    if (!snippet_id || !mode || wpm === undefined || accuracy === undefined || !elapsed_ms) {
+      return res.status(400).json({ error: 'missing required fields' });
+    }
+    
+    // Validate mode
+    if (!['daily', 'practice'].includes(mode)) {
+      return res.status(400).json({ error: 'invalid mode' });
+    }
+    
+    // Insert attempt record - the trigger will automatically update user_stats
+    const { data, error } = await supabase
+      .from('attempts')
+      .insert({
+        user_id: user.id,
+        snippet_id,
+        mode,
+        wpm: parseFloat(wpm),
+        accuracy: parseFloat(accuracy),
+        elapsed_ms: parseInt(elapsed_ms)
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Insert attempt error:', error);
+      return res.status(500).json({ error: 'failed to store attempt' });
+    }
+    
+    return res.status(200).json({ success: true, attempt_id: data.id });
+    
+  } catch (err) {
+    console.error('Attempt API error:', err);
+    return res.status(500).json({ 
+      error: err.message || 'server error',
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+  }
 });
 
 app.get('/api/leaderboard/daily', (req, res) => {
