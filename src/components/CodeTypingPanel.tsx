@@ -257,8 +257,10 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
       if (userInput[i] !== snippet[i]) return false;
     }
     
-    // Must have typed at least one character on this line to show enter
-    return cursorPos > lineStart;
+    // Show enter hint when:
+    // 1. Line is empty (blank line) - cursorPos === lineStart
+    // 2. All characters on line are typed correctly - cursorPos > lineStart
+    return true; // We've already verified we're at a newline and all chars are correct
   }, [userInput, snippet]);
 
   // Calculate enter hint position - fixed distance from cursor
