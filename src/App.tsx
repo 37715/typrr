@@ -11,6 +11,7 @@ function App() {
   const [snippetId, setSnippetId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
 
   // Function to normalize snippet content - handles escaped newlines and Windows line endings
   const normalizeSnippetContent = (content: string): string => {
@@ -31,6 +32,11 @@ function App() {
     setRefreshTrigger(prev => prev + 1);
   };
 
+  const handleLanguageChange = (language: string) => {
+    setSelectedLanguage(language);
+    setRefreshTrigger(prev => prev + 1); // Trigger a reload with new language filter
+  };
+
   useEffect(() => {
     const loadSnippet = async () => {
       try {
@@ -38,7 +44,13 @@ function App() {
         setApiError(null);
         const isPractice = window.location.pathname.includes('practice');
         
-        const endpoint = isPractice ? '/api/practice/random' : '/api/daily';
+        let endpoint = isPractice ? '/api/practice/random' : '/api/daily';
+        
+        // Add language filter for practice mode
+        if (isPractice && selectedLanguage !== 'all') {
+          endpoint += `?language=${selectedLanguage}`;
+        }
+        
         const response = await fetch(endpoint);
         
         if (response.ok) {
@@ -64,7 +76,7 @@ function App() {
     };
 
     loadSnippet();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, selectedLanguage]);
 
   if (isLoading) {
     return (
@@ -118,6 +130,8 @@ function App() {
                   onStart={handleTypingStart}
                   onReset={handleReset}
                   onRefresh={handleRefresh}
+                  selectedLanguage={selectedLanguage}
+                  onLanguageChange={handleLanguageChange}
                 />
               </>
             } />

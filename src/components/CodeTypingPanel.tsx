@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { GetStartedButton } from '@/components/ui/get-started-button';
 import { LeaderboardModal } from '@/components/ui/leaderboard-modal';
+import { LanguageFilterDropdown } from '@/components/ui/language-filter-dropdown';
 import { supabase } from '@/lib/supabase';
 
 interface CodeTypingPanelProps {
@@ -10,6 +11,8 @@ interface CodeTypingPanelProps {
   onStart: () => void;
   onReset: () => void;
   onRefresh: () => void;
+  selectedLanguage?: string;
+  onLanguageChange?: (language: string) => void;
 }
 
 export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
@@ -18,6 +21,8 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   onStart,
   onReset,
   onRefresh,
+  selectedLanguage = 'all',
+  onLanguageChange,
 }) => {
   const [userInput, setUserInput] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
@@ -384,7 +389,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
           </div>
         </div>
         {/* Code Panel */}
-        <div className="relative">
+        <div className="relative max-h-96 overflow-auto">
           <div className="flex">
             {/* Line Numbers */}
             <div className="select-none px-6 py-8 bg-zinc-100 dark:bg-zinc-800/30 border-r border-zinc-200 dark:border-zinc-800 normal-case transition-colors duration-300">
@@ -425,7 +430,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
                 className="relative z-10 w-full h-full p-8 bg-transparent text-transparent font-mono no-liga text-lg leading-7 resize-none outline-none caret-transparent selection:bg-green-500/30 normal-case"
                 style={{ 
                   caretColor: 'transparent',
-                  minHeight: `${snippetLines.length * 1.9 + 6}rem`
+                  minHeight: `${Math.min(snippetLines.length * 1.9 + 6, 20)}rem`
                 }}
                 spellCheck={false}
                 autoComplete="off"
@@ -458,11 +463,21 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
 
       {/* controls */}
       <div className="mt-8 flex flex-col items-center gap-4">
-        {isDailyMode ? (
-          <GetStartedButton onClick={() => setLbOpen(true)} label="leaderboard" />
-        ) : (
-          <GetStartedButton onClick={handleRefresh} />
-        )}
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          {isDailyMode ? (
+            <GetStartedButton onClick={() => setLbOpen(true)} label="leaderboard" />
+          ) : (
+            <>
+              <GetStartedButton onClick={handleRefresh} />
+              {onLanguageChange && (
+                <LanguageFilterDropdown 
+                  selectedLanguage={selectedLanguage}
+                  onLanguageChange={onLanguageChange}
+                />
+              )}
+            </>
+          )}
+        </div>
         {!isDailyMode && (
           <button
             onClick={() => {
