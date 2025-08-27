@@ -47,6 +47,9 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   });
 
   const startTimestampRef = useRef<number>(0);
+  const [totalMistakes, setTotalMistakes] = useState(0);
+  const [totalKeysPressed, setTotalKeysPressed] = useState(0);
+  
   const totalCharsTyped = userInput.length;
   const totalWordsTyped = useMemo(() => totalCharsTyped / 5, [totalCharsTyped]);
   const wpm = useMemo(() => {
@@ -55,6 +58,13 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     if (elapsedMinutes <= 0) return 0;
     return totalWordsTyped / elapsedMinutes;
   }, [totalWordsTyped, hasStarted]);
+
+  // Calculate accuracy as percentage of correct first-attempt keystrokes
+  const accuracy = useMemo(() => {
+    if (!hasStarted || totalKeysPressed === 0) return null; // Show "-" before typing starts
+    const correctKeys = totalKeysPressed - totalMistakes;
+    return Math.max(0, (correctKeys / totalKeysPressed) * 100);
+  }, [totalKeysPressed, totalMistakes, hasStarted]);
 
   const hasMistake = useMemo(() => {
     for (let i = 0; i < userInput.length; i += 1) {
@@ -75,6 +85,8 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     setUserInput('');
     setHasStarted(false);
     setIsComplete(false);
+    setTotalMistakes(0);
+    setTotalKeysPressed(0);
     startTimestampRef.current = 0;
     onReset();
 
@@ -93,6 +105,43 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
       setIsFocused(true);
     }
   }, []);
+
+  // Handle input changes and track keystrokes
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    // Normalize Windows CRLF to LF to match snippet formatting
+    const newValue = e.target.value.replace(/\r\n/g, '\n');
+    const prevLength = userInput.length;
+    const newLength = newValue.length;
+    
+    // Start timer on first keystroke
+    if (!hasStarted && newLength > 0) {
+      setHasStarted(true);
+      startTimestampRef.current = performance.now();
+      onStart();
+    }
+    
+    // Prevent typing beyond the snippet length
+    if (newLength > snippet.length) return;
+    
+    // Count keystrokes only when adding characters (not deleting)
+    if (newLength > prevLength) {
+      const keysAdded = newLength - prevLength;
+      setTotalKeysPressed(prev => prev + keysAdded);
+      
+      // Check if any of the newly added characters are incorrect
+      let mistakes = 0;
+      for (let i = prevLength; i < newLength; i++) {
+        if (i < snippet.length && newValue[i] !== snippet[i]) {
+          mistakes++;
+        }
+      }
+      if (mistakes > 0) {
+        setTotalMistakes(prev => prev + mistakes);
+      }
+    }
+    
+    setUserInput(newValue);
+  };
 
   // Initialize attempts from localStorage for daily mode
   useEffect(() => {
@@ -120,21 +169,6 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     });
   }, [isComplete, attemptRecorded, isDailyMode, todayKey]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    // Normalize Windows CRLF to LF to match snippet formatting
-    const value = e.target.value.replace(/\r\n/g, '\n');
-    
-    if (!hasStarted && value.length > 0) {
-      setHasStarted(true);
-      startTimestampRef.current = performance.now();
-      onStart();
-    }
-
-    // Prevent typing beyond the snippet length
-    if (value.length <= snippet.length) {      
-      setUserInput(value);
-    }
-  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Preserve typing within snippet length and support Tab indentation
@@ -383,9 +417,16 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         <div className="pointer-events-none absolute -inset-x-8 -inset-y-6 rounded-[2rem] bg-gradient-to-r from-blue-500/15 via-purple-500/15 to-blue-500/15 blur-3xl" />
       )}
       <div className="bg-zinc-50 dark:bg-zinc-900/90 backdrop-blur-sm rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden transition-colors duration-300 relative">
-        {/* centered WPM header with mode badge */}
+        {/* centered WPM and Accuracy header with mode badge */}
         <div className="relative flex items-center justify-center px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-950/60 transition-colors duration-300">
-          <div className="text-2xl font-mono text-zinc-900 dark:text-white">{isComplete ? wpm.toFixed(0) : Math.max(0, Math.floor(wpm)).toString()} wpm</div>
+          <div className="flex items-center gap-8">
+            <div className="text-2xl font-mono text-zinc-900 dark:text-white">
+              {isComplete ? wpm.toFixed(0) : Math.max(0, Math.floor(wpm)).toString()} wpm
+            </div>
+            <div className="text-2xl font-mono text-zinc-900 dark:text-white">
+              {accuracy !== null ? `${accuracy.toFixed(0)}% acc` : '- acc'}
+            </div>
+          </div>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300">
             <span className="lowercase">{isDailyMode ? `${attemptsRemaining} attempts left` : 'practice'}</span>
           </div>
