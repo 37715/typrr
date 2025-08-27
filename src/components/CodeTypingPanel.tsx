@@ -261,7 +261,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     return cursorPos > lineStart;
   }, [userInput, snippet]);
 
-  // Calculate enter hint position
+  // Calculate enter hint position - fixed distance from cursor
   const enterHintPosition = useMemo(() => {
     if (!isLineCompleted || !isFocused || isComplete) return null;
     
@@ -270,7 +270,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     const currentLineLength = lines[currentLineIndex]?.length || 0;
     
     return {
-      left: `${32 + currentLineLength * 9.6 + 25}px`, // Move much further right to avoid overlap
+      left: `${64 + currentLineLength * 9.6 + 30}px`, // Fixed 30px offset from cursor
       top: `${32 + currentLineIndex * 28}px`
     };
   }, [isLineCompleted, isFocused, isComplete, userInput]);
@@ -389,7 +389,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
           </div>
         </div>
         {/* Code Panel */}
-        <div className="relative max-h-96 overflow-auto">
+        <div className="relative">
           <div className="flex">
             {/* Line Numbers */}
             <div className="select-none px-6 py-8 bg-zinc-100 dark:bg-zinc-800/30 border-r border-zinc-200 dark:border-zinc-800 normal-case transition-colors duration-300">
@@ -430,7 +430,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
                 className="relative z-10 w-full h-full p-8 bg-transparent text-transparent font-mono no-liga text-lg leading-7 resize-none outline-none caret-transparent selection:bg-green-500/30 normal-case"
                 style={{ 
                   caretColor: 'transparent',
-                  minHeight: `${Math.min(snippetLines.length * 1.9 + 6, 20)}rem`
+                  minHeight: `${snippetLines.length * 1.9 + 6}rem`
                 }}
                 spellCheck={false}
                 autoComplete="off"

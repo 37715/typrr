@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 export function GetStartedButton({ onClick, label = 'new challenge' }: { onClick?: () => void; label?: string }) {
   return (
     <Button
-      className="group relative overflow-hidden rounded-xl border border-zinc-300 bg-zinc-900 text-white hover:bg-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 md:px-8"
+      className="group relative overflow-hidden rounded-xl border border-zinc-300 bg-zinc-800 text-white hover:bg-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 md:px-8"
       size="lg"
       onClick={onClick}
     >
