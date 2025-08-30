@@ -1,11 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
   
   try {
-    console.log('🎯 Vercel API endpoint hit!', req.body);
+    console.log('🎯 API endpoint hit!', req.body);
     
     // Get auth token from headers
     const authHeader = req.headers.authorization;
@@ -17,15 +16,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     // Use service role key for database operations
     const supabase = createClient(
-      process.env.SUPABASE_URL as string, 
-      process.env.SUPABASE_SERVICE_ROLE_KEY as string, 
+      process.env.SUPABASE_URL, 
+      process.env.SUPABASE_SERVICE_ROLE_KEY, 
       { auth: { persistSession: false } }
     );
     
     // Verify user with anon key
     const userClient = createClient(
-      process.env.SUPABASE_URL as string, 
-      process.env.SUPABASE_ANON_KEY as string, 
+      process.env.SUPABASE_URL, 
+      process.env.SUPABASE_ANON_KEY, 
       { 
         auth: { persistSession: false },
         global: { headers: { Authorization: `Bearer ${token}` } }
@@ -64,8 +63,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .gte('created_at', today + 'T00:00:00Z')
         .lte('created_at', today + 'T23:59:59Z');
       if (countErr) throw countErr;
-      const used = (countData as any)?.length ?? 0; // count in head mode can be driver-dependent; fallback at API level if needed
-      if ((countData as any)?.count >= 3 || used >= 3) {
+      const used = countData?.length ?? 0;
+      if (countData?.count >= 3 || used >= 3) {
         return res.status(403).json({ error: 'daily attempts exhausted' });
       }
     }
@@ -90,9 +89,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(200).json({ success: true, attempt_id: data.id });
-  } catch (err: any) {
+  } catch (err) {
+    console.error('Attempt handler error:', err);
     return res.status(500).json({ error: err.message || 'server error' });
   }
 }
-
-

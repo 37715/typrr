@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   if (req.method !== 'DELETE') {
     return res.status(405).json({ error: 'method not allowed' });
   }
@@ -19,8 +18,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     // Use service role key for admin operations
     const supabase = createClient(
-      process.env.SUPABASE_URL as string, 
-      process.env.SUPABASE_SERVICE_ROLE_KEY as string, 
+      process.env.SUPABASE_URL, 
+      process.env.SUPABASE_SERVICE_ROLE_KEY, 
       {
         auth: {
           autoRefreshToken: false,
