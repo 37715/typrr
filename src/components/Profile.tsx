@@ -107,28 +107,32 @@ export const Profile: React.FC = () => {
     
     if (user) {
       try {
-        const { error } = await supabase
-          .from('profiles')
-          .upsert({ 
-            id: user.id, 
-            username: tempUsername.trim().toLowerCase(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
+        // Use the new function that handles username change limits
+        const { data: result, error } = await supabase.rpc('update_username_with_limits', {
+          user_id: user.id,
+          new_username: tempUsername.trim().toLowerCase()
+        });
         
         if (error) {
-          console.error('Profile upsert error:', error);
-          if (error.code === '23505') { // Unique constraint violation
-            toast({ variant: 'error', title: 'username taken', description: 'please choose a different username' });
-          } else if (error.code === '42P01') { // Table doesn't exist
-            toast({ variant: 'error', title: 'database not ready', description: 'please run the SQL migration first' });
-          } else {
-            toast({ variant: 'error', title: 'update failed', description: `${error.message}` });
-          }
-        } else {
+          console.error('Username update error:', error);
+          toast({ variant: 'error', title: 'update failed', description: 'please try again' });
+        } else if (result && result.success) {
           setCustomUsername(tempUsername.trim().toLowerCase());
           setIsEditingUsername(false);
-          toast({ variant: 'success', title: 'username updated' });
+          const remaining = result.changes_remaining || 0;
+          toast({ 
+            variant: 'success', 
+            title: 'username updated', 
+            description: `${remaining} changes remaining this month`
+          });
+        } else if (result && !result.success) {
+          if (result.error === 'username_limit_exceeded') {
+            toast({ variant: 'error', title: 'change limit exceeded', description: 'you can only change your username twice per month' });
+          } else if (result.error === 'username_taken') {
+            toast({ variant: 'error', title: 'username taken', description: 'please choose a different username' });
+          } else {
+            toast({ variant: 'error', title: 'update failed', description: result.message || 'please try again' });
+          }
         }
       } catch (err) {
         console.error('Username update error:', err);
@@ -148,9 +152,9 @@ export const Profile: React.FC = () => {
       return;
     }
 
-    // Validate file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      toast({ variant: 'error', title: 'file too large', description: 'please select an image under 2MB' });
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ variant: 'error', title: 'file too large', description: 'please select an image under 5MB' });
       return;
     }
 
@@ -159,40 +163,44 @@ export const Profile: React.FC = () => {
     const user = data.user;
     
     if (user) {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}.${fileExt}`;
-      
-      // Upload to storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file, { upsert: true });
-      
-      if (uploadError) {
+      try {
+        // Convert image to Base64 data URL
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const base64Data = e.target?.result as string;
+          
+          // Update profile with Base64 image data
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .upsert({ 
+              id: user.id, 
+              avatar_url: base64Data
+            });
+          
+          if (updateError) {
+            console.error('Profile update error:', updateError);
+            toast({ variant: 'error', title: 'profile update failed', description: 'please try again' });
+          } else {
+            setAvatarUrl(base64Data);
+            toast({ variant: 'success', title: 'profile picture updated' });
+          }
+          setIsLoading(false);
+        };
+        
+        reader.onerror = () => {
+          toast({ variant: 'error', title: 'file read error', description: 'please try again' });
+          setIsLoading(false);
+        };
+        
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Avatar upload error:', error);
         toast({ variant: 'error', title: 'upload failed', description: 'please try again' });
-      } else {
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(fileName);
-        
-        // Update profile
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .upsert({ 
-            id: user.id, 
-            avatar_url: urlData.publicUrl,
-            updated_at: new Date().toISOString()
-          });
-        
-        if (updateError) {
-          toast({ variant: 'error', title: 'profile update failed', description: 'please try again' });
-        } else {
-          setAvatarUrl(urlData.publicUrl);
-          toast({ variant: 'success', title: 'profile picture updated' });
-        }
+        setIsLoading(false);
       }
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (
