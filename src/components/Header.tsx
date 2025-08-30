@@ -10,7 +10,33 @@ export const Header: React.FC = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
+  const [dailyData, setDailyData] = useState([]);
   const toast = useToast();
+
+  const fetchDailyLeaderboard = async () => {
+    try {
+      const response = await fetch('/api/leaderboard/daily');
+      if (response.ok) {
+        const data = await response.json();
+        const formattedData = data.leaderboard?.map((entry: any) => ({
+          id: entry.user_id,
+          username: entry.username,
+          avatarUrl: entry.avatar_url,
+          wpm: entry.wpm,
+          accuracy: entry.accuracy,
+          timeMs: entry.elapsed_ms
+        })) || [];
+        setDailyData(formattedData);
+      }
+    } catch (error) {
+      console.error('Failed to fetch daily leaderboard:', error);
+    }
+  };
+
+  const handleLeaderboardOpen = () => {
+    setLbOpen(true);
+    fetchDailyLeaderboard();
+  };
 
   useEffect(() => {
     // detect session on load and subscribe to changes (works after OAuth redirect)
@@ -68,7 +94,7 @@ export const Header: React.FC = () => {
           </nav>
 
           <div className="flex items-center space-x-2 justify-end">
-            <button onClick={() => setLbOpen(true)} className="p-2 text-zinc-500 rounded-lg transition-colors duration-200 hover:bg-black hover:text-white dark:text-zinc-400 dark:hover:bg-white dark:hover:text-zinc-900" aria-label="trophies">
+            <button onClick={handleLeaderboardOpen} className="p-2 text-zinc-500 rounded-lg transition-colors duration-200 hover:bg-black hover:text-white dark:text-zinc-400 dark:hover:bg-white dark:hover:text-zinc-900" aria-label="trophies">
               <Trophy className="w-5 h-5" />
             </button>
             <a
@@ -93,7 +119,7 @@ export const Header: React.FC = () => {
               onLogin={() => setAuthOpen(false)}
               onSignup={() => setAuthOpen(false)}
             />
-            <LeaderboardModal open={lbOpen} onOpenChange={setLbOpen} />
+            <LeaderboardModal open={lbOpen} onOpenChange={setLbOpen} daily={dailyData} />
           </div>
         </div>
       </div>

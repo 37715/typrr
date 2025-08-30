@@ -71,15 +71,16 @@ export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [] 
                   <tr className="text-left text-xs uppercase text-zinc-500 dark:text-zinc-400">
                     <th className="w-14">rank</th>
                     <th>user</th>
-                    <th className="w-24">wpm</th>
-                    <th className="w-28">time</th>
+                    <th className="w-20">wpm</th>
+                    <th className="w-20">acc</th>
+                    <th className="w-24">time</th>
                     <th className="w-28"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-zinc-500 dark:text-zinc-400">no entries yet</td>
+                      <td colSpan={6} className="py-8 text-center text-zinc-500 dark:text-zinc-400">no entries yet</td>
                     </tr>
                   )}
                   {data.map((e, i) => (
@@ -92,6 +93,7 @@ export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [] 
                         </div>
                       </td>
                       <td className="py-3 text-sm font-semibold">{Math.round(e.wpm)}</td>
+                      <td className="py-3 text-sm">{e.accuracy ? Math.round(e.accuracy) : '-'}%</td>
                       <td className="py-3 text-sm">{(e.timeMs / 1000).toFixed(2)}s</td>
                       <td className="py-3 text-right">
                         <button className="px-3 py-1.5 rounded-lg text-sm border border-zinc-200 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-white/10">watch replay</button>

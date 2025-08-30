@@ -42,6 +42,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   const [attemptsRemaining, setAttemptsRemaining] = useState<number>(3);
   const [attemptRecorded, setAttemptRecorded] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
+  const [dailyData, setDailyData] = useState([]);
   const [autoNext, setAutoNext] = useState<boolean>(() => {
     try {
       return localStorage.getItem('typrr_auto_next') === '1';
@@ -171,6 +172,30 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     });
   }, [isComplete, attemptRecorded, isDailyMode, todayKey]);
 
+  const fetchDailyLeaderboard = async () => {
+    try {
+      const response = await fetch('/api/leaderboard/daily');
+      if (response.ok) {
+        const data = await response.json();
+        const formattedData = data.leaderboard?.map((entry: any) => ({
+          id: entry.user_id,
+          username: entry.username,
+          avatarUrl: entry.avatar_url,
+          wpm: entry.wpm,
+          accuracy: entry.accuracy,
+          timeMs: entry.elapsed_ms
+        })) || [];
+        setDailyData(formattedData);
+      }
+    } catch (error) {
+      console.error('Failed to fetch daily leaderboard:', error);
+    }
+  };
+
+  const handleLeaderboardOpen = () => {
+    setLbOpen(true);
+    fetchDailyLeaderboard();
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Preserve typing within snippet length and support Tab indentation
@@ -532,7 +557,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
       <div className="mt-8 flex flex-col items-center gap-4">
         <div className="flex flex-col sm:flex-row items-center gap-4">
           {isDailyMode ? (
-            <GetStartedButton onClick={() => setLbOpen(true)} label="leaderboard" />
+            <GetStartedButton onClick={handleLeaderboardOpen} label="leaderboard" />
           ) : (
             <>
               <GetStartedButton onClick={handleRefresh} />
@@ -557,7 +582,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         )}
       </div>
 
-      <LeaderboardModal open={lbOpen} onOpenChange={setLbOpen} />
+      <LeaderboardModal open={lbOpen} onOpenChange={setLbOpen} daily={dailyData} />
 
       {isLocked && (
         <div className="mt-6 text-center">

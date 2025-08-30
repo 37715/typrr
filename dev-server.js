@@ -243,19 +243,23 @@ async function loadApiRoutes() {
     
     // Try to load optional leaderboard routes
     try {
-      const leaderboardDailyModule = await import('./api/leaderboard/daily.ts');
-      const leaderboardAlltimeModule = await import('./api/leaderboard/alltime.ts');
-      
+      const leaderboardDailyModule = await import('./api/leaderboard/daily.mjs');
       app.get('/api/leaderboard/daily', (req, res) => {
         leaderboardDailyModule.default(req, res);
       });
-      
+      console.log('✅ Daily leaderboard route registered');
+    } catch (err) {
+      console.error('❌ Failed to load daily leaderboard route:', err.message);
+    }
+    
+    try {
+      const leaderboardAlltimeModule = await import('./api/leaderboard/alltime.ts');
       app.get('/api/leaderboard/alltime', (req, res) => {
         leaderboardAlltimeModule.default(req, res);
       });
-      console.log('✅ Leaderboard routes registered');
+      console.log('✅ All-time leaderboard route registered');
     } catch (err) {
-      console.log('⚠️ Leaderboard routes not loaded (optional)');
+      console.log('⚠️ All-time leaderboard route not loaded (optional)');
     }
     
     // Try to load optional replays route

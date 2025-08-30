@@ -125,6 +125,36 @@ SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 ```
 
+## Daily Challenge Leaderboard System
+
+### Overview
+The daily challenge features a comprehensive leaderboard system with two main components:
+
+**Top10 Component** (`src/components/Top10.tsx`):
+- Sidebar leaderboard showing top 10 daily performers
+- Table format with rank, user, WPM, accuracy, time, and replay button
+- Positioned absolutely to the right of the main content
+- Auto-refreshes when new attempts are completed via `refreshTrigger` prop
+- Shows gold/silver/bronze medals (🥇🥈🥉) for top 3
+
+**LeaderboardModal Component** (`src/components/ui/leaderboard-modal.tsx`):
+- Full-screen modal accessible via trophy button (header) and "leaderboard" button (daily mode)
+- Shows same data as Top10 but in detailed modal format
+- Includes accuracy column and full user information
+- Supports both daily and all-time leaderboards (tabs)
+
+### Key Implementation Details
+- **Daily-specific**: Each day has its own leaderboard that resets at midnight UTC
+- **Best attempt only**: Users get 3 attempts per day, but only their best WPM is shown
+- **Real-time updates**: Both components refresh automatically after attempt completion
+- **Data flow**: API endpoint (`/api/leaderboard/daily`) → formatted for both components
+- **Layout**: Code snippet stays centered, Top10 positioned absolutely to avoid layout shift
+
+### Critical Layout Rules
+- **Code snippet centering**: Use `max-w-4xl mx-auto` to keep code perfectly centered
+- **Top10 positioning**: Use `absolute` positioning so it doesn't affect main content
+- **No layout interference**: Top10 should never push or move the main typing interface
+
 ## Component Details
 
 ### Profile.tsx
