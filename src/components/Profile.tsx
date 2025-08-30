@@ -15,6 +15,7 @@ export const Profile: React.FC = () => {
   const [xp, setXp] = useState<number>(0);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [tempUsername, setTempUsername] = useState<string>('');
+  const [usernameValidation, setUsernameValidation] = useState({ available: true, message: '', checking: false });
   const [isLoading, setIsLoading] = useState(false);
   const toast = useToast();
 
@@ -26,13 +27,12 @@ export const Profile: React.FC = () => {
       setUsername(user?.user_metadata?.user_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'user');
       
       if (user) {
-        // Fetch user profile (username and avatar)
+        // Fetch user profile (username and avatar) - use regular query instead of maybeSingle
         try {
-          const { data: profile, error: profileError } = await supabase
+          const { data: profiles, error: profileError } = await supabase
             .from('profiles')
             .select('username, avatar_url')
-            .eq('id', user.id)
-            .maybeSingle();
+            .eq('id', user.id);
           
           if (profileError) {
             console.log('Profile not found or table not accessible:', profileError);
@@ -40,10 +40,97 @@ export const Profile: React.FC = () => {
             setCustomUsername('');
             setAvatarUrl('');
             setTempUsername('');
-          } else if (profile) {
-            setCustomUsername(profile.username || '');
-            setAvatarUrl(profile.avatar_url || '');
-            setTempUsername(profile.username || '');
+          } else if (profiles && profiles.length > 0) {
+            const profile = profiles[0];
+            const currentUsername = profile.username || '';
+            
+            // Check if username is valid (no spaces, follows rules)
+            const isValidUsername = currentUsername && 
+              /^[a-zA-Z0-9_]+$/.test(currentUsername) && 
+              currentUsername.length >= 3 && 
+              currentUsername.length <= 20 &&
+              /^[a-zA-Z0-9]/.test(currentUsername) &&
+              /[a-zA-Z0-9]$/.test(currentUsername);
+            
+            if (isValidUsername) {
+              // Valid username, use it
+              setCustomUsername(currentUsername);
+              setAvatarUrl(profile.avatar_url || '');
+              setTempUsername(currentUsername);
+              console.log('Found valid username:', currentUsername);
+            } else {
+              // Invalid username (has spaces or other issues), replace it
+              console.log('Found invalid username:', currentUsername, 'replacing with random username');
+              try {
+                const { data: randomUsername, error: randomError } = await supabase
+                  .rpc('generate_random_username');
+
+                if (!randomError && randomUsername) {
+                  const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({ username: randomUsername })
+                    .eq('id', user.id);
+
+                  if (!updateError) {
+                    setCustomUsername(randomUsername);
+                    setTempUsername(randomUsername);
+                    setAvatarUrl(profile.avatar_url || '');
+                    console.log('Updated invalid username to:', randomUsername);
+                  } else {
+                    console.error('Failed to update invalid username:', updateError);
+                    setCustomUsername(currentUsername);
+                    setTempUsername(currentUsername);
+                    setAvatarUrl(profile.avatar_url || '');
+                  }
+                } else {
+                  console.error('Random username generation failed:', randomError);
+                  setCustomUsername(currentUsername);
+                  setTempUsername(currentUsername);
+                  setAvatarUrl(profile.avatar_url || '');
+                }
+              } catch (err) {
+                console.error('Username replacement error:', err);
+                setCustomUsername(currentUsername);
+                setTempUsername(currentUsername);
+                setAvatarUrl(profile.avatar_url || '');
+              }
+            }
+          } else {
+            // No profile found, create one automatically
+            console.log('No profile found for user, creating profile with random username');
+            try {
+              const { data: randomUsername, error: randomError } = await supabase
+                .rpc('generate_random_username');
+
+              if (!randomError && randomUsername) {
+                const { error: createError } = await supabase
+                  .from('profiles')
+                  .insert({
+                    id: user.id,
+                    username: randomUsername,
+                    created_at: new Date().toISOString()
+                  });
+
+                if (!createError) {
+                  setCustomUsername(randomUsername);
+                  setTempUsername(randomUsername);
+                  console.log('Auto-created profile with username:', randomUsername);
+                } else {
+                  console.error('Auto profile creation failed:', createError);
+                  setCustomUsername('');
+                  setTempUsername('');
+                }
+              } else {
+                console.error('Random username generation failed:', randomError);
+                setCustomUsername('');
+                setTempUsername('');
+              }
+            } catch (err) {
+              console.error('Auto profile creation error:', err);
+              setCustomUsername('');
+              setTempUsername('');
+            }
+            setAvatarUrl('');
           }
         } catch (error) {
           console.log('Error fetching profile:', error);
@@ -95,9 +182,61 @@ export const Profile: React.FC = () => {
     window.location.href = '/daily';
   };
 
+  // Real-time username validation
+  const checkUsernameAvailability = async (username: string) => {
+    if (!username.trim() || username === customUsername) {
+      setUsernameValidation({ available: true, message: '', checking: false });
+      return;
+    }
+
+    setUsernameValidation({ available: false, message: 'checking...', checking: true });
+    
+    try {
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      
+      const { data: result, error } = await supabase.rpc('check_username_availability', {
+        check_username: username.trim(),
+        user_id: user?.id
+      });
+      
+      if (error) {
+        setUsernameValidation({ available: false, message: 'error checking availability', checking: false });
+      } else {
+        setUsernameValidation({ 
+          available: result.available, 
+          message: result.message,
+          checking: false 
+        });
+      }
+    } catch (err) {
+      setUsernameValidation({ available: false, message: 'error checking availability', checking: false });
+    }
+  };
+
+  // Debounced username checking
+  useEffect(() => {
+    if (!isEditingUsername) return;
+    
+    const timeoutId = setTimeout(() => {
+      if (tempUsername && tempUsername !== customUsername) {
+        checkUsernameAvailability(tempUsername);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [tempUsername, isEditingUsername, customUsername]);
+
   const handleUsernameUpdate = async () => {
-    if (!tempUsername.trim() || tempUsername.trim().length < 3) {
+    const trimmedUsername = tempUsername.trim();
+    
+    if (!trimmedUsername || trimmedUsername.length < 3) {
       toast({ variant: 'error', title: 'username too short', description: 'must be at least 3 characters' });
+      return;
+    }
+
+    if (!usernameValidation.available && !usernameValidation.checking) {
+      toast({ variant: 'error', title: 'invalid username', description: usernameValidation.message });
       return;
     }
 
@@ -107,31 +246,87 @@ export const Profile: React.FC = () => {
     
     if (user) {
       try {
-        // Use the new function that handles username change limits
-        const { data: result, error } = await supabase.rpc('update_username_with_limits', {
-          user_id: user.id,
-          new_username: tempUsername.trim().toLowerCase()
-        });
-        
-        if (error) {
-          console.error('Username update error:', error);
-          toast({ variant: 'error', title: 'update failed', description: 'please try again' });
-        } else if (result && result.success) {
-          setCustomUsername(tempUsername.trim().toLowerCase());
-          setIsEditingUsername(false);
-          const remaining = result.changes_remaining || 0;
+        // First, ensure a profile exists for this user
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (!existingProfile) {
+          // Create profile if it doesn't exist - use the random username generator
+          const { data: randomUsername, error: randomError } = await supabase
+            .rpc('generate_random_username');
+
+          if (randomError) {
+            console.error('Random username generation error:', randomError);
+            toast({ variant: 'error', title: 'username generation failed', description: 'please try again' });
+            setIsLoading(false);
+            return;
+          }
+
+          const { error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              username: randomUsername,
+              created_at: new Date().toISOString()
+            });
+
+          if (createError) {
+            console.error('Profile creation error:', createError);
+            toast({ variant: 'error', title: 'profile creation failed', description: 'please try again' });
+            setIsLoading(false);
+            return;
+          }
+
+          // Update local state with the random username, then allow them to change it
+          setCustomUsername(randomUsername);
+          setTempUsername(trimmedUsername); // Keep their desired username in the input
+          setIsEditingUsername(true); // Keep editing mode open
           toast({ 
             variant: 'success', 
-            title: 'username updated', 
-            description: `${remaining} changes remaining this month`
+            title: 'profile created', 
+            description: `assigned username: ${randomUsername}. you can change it now.`
           });
-        } else if (result && !result.success) {
-          if (result.error === 'username_limit_exceeded') {
-            toast({ variant: 'error', title: 'change limit exceeded', description: 'you can only change your username twice per month' });
-          } else if (result.error === 'username_taken') {
-            toast({ variant: 'error', title: 'username taken', description: 'please choose a different username' });
-          } else {
-            toast({ variant: 'error', title: 'update failed', description: result.message || 'please try again' });
+        } else {
+          // Profile exists, use the update function
+          const { data: result, error } = await supabase.rpc('update_username_with_limits', {
+            user_id: user.id,
+            new_username: trimmedUsername
+          });
+          
+          if (error) {
+            console.error('Username update error:', error);
+            toast({ variant: 'error', title: 'update failed', description: 'please try again' });
+          } else if (result && result.success) {
+            setCustomUsername(trimmedUsername);
+            setIsEditingUsername(false);
+            const remaining = result.changes_remaining || 0;
+            toast({ 
+              variant: 'success', 
+              title: 'username updated', 
+              description: `${remaining} changes remaining this month`
+            });
+          } else if (result && !result.success) {
+            let errorTitle = 'update failed';
+            let errorDescription = result.message || 'please try again';
+            
+            if (result.error === 'username_taken') {
+              errorTitle = 'username taken';
+              errorDescription = 'try a different username';
+            } else if (result.error === 'username_limit_exceeded') {
+              errorTitle = 'change limit reached';
+              errorDescription = 'you can only change your username twice per month';
+            } else if (result.error === 'invalid_length') {
+              errorTitle = 'invalid length';
+              errorDescription = 'username must be 3-20 characters';
+            } else if (result.error === 'invalid_format') {
+              errorTitle = 'invalid format';
+              errorDescription = 'only letters, numbers, and underscores allowed';
+            }
+            
+            toast({ variant: 'error', title: errorTitle, description: errorDescription });
           }
         }
       } catch (err) {
@@ -212,7 +407,7 @@ export const Profile: React.FC = () => {
           <div className="relative">
             <div className="w-16 h-16 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                <img src={avatarUrl} alt="profile" className="w-full h-full object-cover" />
               ) : (
                 <User size={24} className="text-zinc-500" />
               )}
@@ -232,33 +427,55 @@ export const Profile: React.FC = () => {
           <div className="flex-1">
             <div className="flex items-center justify-between">
               {isEditingUsername ? (
-                <div className="flex items-center gap-2 flex-1">
-                  <input
-                    type="text"
-                    value={tempUsername}
-                    onChange={(e) => setTempUsername(e.target.value)}
-                    className="flex-1 px-2 py-1 text-lg font-medium bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter username"
-                    maxLength={20}
-                    disabled={isLoading}
-                  />
-                  <button
-                    onClick={handleUsernameUpdate}
-                    disabled={isLoading}
-                    className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
-                  >
-                    <Check size={16} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsEditingUsername(false);
-                      setTempUsername(customUsername);
-                    }}
-                    disabled={isLoading}
-                    className="p-1 text-red-600 hover:text-red-700 disabled:opacity-50"
-                  >
-                    <X size={16} />
-                  </button>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={tempUsername}
+                      onChange={(e) => setTempUsername(e.target.value)}
+                      className={`flex-1 px-2 py-1 text-lg font-medium bg-white dark:bg-zinc-800 border rounded-md focus:outline-none focus:ring-2 ${
+                        usernameValidation.checking 
+                          ? 'border-yellow-300 dark:border-yellow-600 focus:ring-yellow-500' 
+                          : usernameValidation.available 
+                            ? 'border-green-300 dark:border-green-600 focus:ring-green-500' 
+                            : tempUsername && tempUsername !== customUsername
+                              ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
+                              : 'border-zinc-300 dark:border-zinc-700 focus:ring-blue-500'
+                      }`}
+                      placeholder="enter username"
+                      maxLength={20}
+                      disabled={isLoading}
+                    />
+                    <button
+                      onClick={handleUsernameUpdate}
+                      disabled={isLoading || !usernameValidation.available || usernameValidation.checking}
+                      className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
+                    >
+                      <Check size={16} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditingUsername(false);
+                        setTempUsername(customUsername);
+                        setUsernameValidation({ available: true, message: '', checking: false });
+                      }}
+                      disabled={isLoading}
+                      className="p-1 text-red-600 hover:text-red-700 disabled:opacity-50"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  {tempUsername && tempUsername !== customUsername && (
+                    <div className={`text-xs mt-1 ${
+                      usernameValidation.checking 
+                        ? 'text-yellow-600 dark:text-yellow-400' 
+                        : usernameValidation.available 
+                          ? 'text-green-600 dark:text-green-400' 
+                          : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      {usernameValidation.message}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">

@@ -1,11 +1,21 @@
 import express from 'express';
 import cors from 'cors';
 import { readFile } from 'fs/promises';
-import path from 'path';
 import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
+
+const app = express();
+const PORT = 3001;
+
+// Middleware
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  credentials: true
+}));
+app.use(express.json());
 
 // Load environment variables from .env.local
 try {
@@ -19,229 +29,77 @@ try {
     }
   });
   console.log('✅ Environment variables loaded');
-} catch (error) {
-  console.error('❌ Error reading .env.local:', error.message);
+} catch (err) {
+  console.error('❌ Could not load .env.local:', err.message);
 }
 
-const app = express();
-const PORT = 3001;
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// Handle OPTIONS preflight requests
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.status(200).end();
-    return;
-  }
-  next();
-});
-
-// Simple daily challenge endpoint implementation
-app.get('/api/daily', async (req, res) => {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
+// Import and handle API routes
+async function loadApiRoutes() {
   try {
-    const { createClient } = await import('@supabase/supabase-js');
+    // Import the attempt handler
+    const attemptModule = await import('./api/attempt.ts');
+    const attemptHandler = attemptModule.default;
     
-    const url = process.env.SUPABASE_URL;
-    const anon = process.env.SUPABASE_ANON_KEY;
+    // Import the daily challenge handler
+    const dailyModule = await import('./api/daily.js');
+    const dailyHandler = dailyModule.default;
     
-    if (!url) return res.status(500).json({ error: 'supabaseUrl is required.' });
-    if (!anon) return res.status(500).json({ error: 'supabaseAnonKey is required.' });
+    // Import the random practice handler
+    const randomModule = await import('./api/practice/random.js');
+    const randomHandler = randomModule.default;
     
-    const supabase = createClient(url, anon, {
-      auth: { persistSession: false, autoRefreshToken: false },
+    // Handle API routes
+    app.post('/api/attempt', (req, res) => {
+      attemptHandler(req, res);
     });
     
-    const today = new Date().toISOString().slice(0, 10); // UTC yyyy-mm-dd
+    app.get('/api/daily', (req, res) => {
+      dailyHandler(req, res);
+    });
     
-    const { data: dc, error: e1 } = await supabase
-      .from('daily_challenges')
-      .select('challenge_date, snippet_id')
-      .eq('challenge_date', today)
-      .maybeSingle(); // This is the fix!
+    app.get('/api/practice/random', (req, res) => {
+      randomHandler(req, res);
+    });
+    
+    // Try to load leaderboard routes
+    try {
+      const leaderboardDailyModule = await import('./api/leaderboard/daily.ts');
+      const leaderboardAlltimeModule = await import('./api/leaderboard/alltime.ts');
       
-    if (e1) throw e1;
-    if (!dc) return res.status(404).json({ error: 'no daily challenge' });
-
-    const { data: snippet, error: e2 } = await supabase
-      .from('snippets')
-      .select('id, language, content')
-      .eq('id', dc.snippet_id)
-      .single();
+      app.get('/api/leaderboard/daily', (req, res) => {
+        leaderboardDailyModule.default(req, res);
+      });
       
-    if (e2) throw e2;
-
-    return res.status(200).json({ date: dc.challenge_date, snippet });
+      app.get('/api/leaderboard/alltime', (req, res) => {
+        leaderboardAlltimeModule.default(req, res);
+      });
+    } catch (err) {
+      console.log('⚠️ Leaderboard routes not loaded (optional)');
+    }
+    
+    // Try to load replays route
+    try {
+      const replayModule = await import('./api/replays/sign-url.ts');
+      app.post('/api/replays/sign-url', (req, res) => {
+        replayModule.default(req, res);
+      });
+    } catch (err) {
+      console.log('⚠️ Replays route not loaded (optional)');
+    }
+    
+    console.log('✅ API routes loaded');
   } catch (err) {
-    console.error('Daily challenge API error:', err);
-    return res.status(500).json({ 
-      error: err.message || 'server error',
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    });
+    console.error('❌ Error loading API routes:', err);
   }
-});
+}
 
-// Store typing attempts
-app.post('/api/attempt', async (req, res) => {
-  console.log('🎯 Attempt endpoint hit!', req.body);
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  try {
-    const { createClient } = await import('@supabase/supabase-js');
-    
-    const url = process.env.SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
-    if (!url) return res.status(500).json({ error: 'supabaseUrl is required.' });
-    if (!serviceKey) return res.status(500).json({ error: 'supabaseServiceKey is required.' });
-    
-    // Get auth token from request
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({ error: 'unauthorized - no token' });
-    }
-    
-    // Create client with anon key to verify user token
-    const anonKey = process.env.SUPABASE_ANON_KEY;
-    const userClient = createClient(url, anonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { Authorization: `Bearer ${token}` } }
-    });
-    
-    // Verify user is authenticated
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-    if (authError || !user) {
-      console.log('Auth error:', authError);
-      return res.status(401).json({ error: 'unauthorized - invalid token' });
-    }
-    
-    console.log('Authenticated user:', user.id);
-    
-    // Create service client for database operations
-    const supabase = createClient(url, serviceKey, {
-      auth: { persistSession: false, autoRefreshToken: false }
-    });
-    
-    const { snippet_id, mode, wpm, accuracy, elapsed_ms } = req.body;
-    
-    // Validate required fields
-    if (!snippet_id || !mode || wpm === undefined || accuracy === undefined || !elapsed_ms) {
-      return res.status(400).json({ error: 'missing required fields' });
-    }
-    
-    // Validate mode
-    if (!['daily', 'practice'].includes(mode)) {
-      return res.status(400).json({ error: 'invalid mode' });
-    }
-    
-    // Insert attempt record - the trigger will automatically update user_stats
-    const { data, error } = await supabase
-      .from('attempts')
-      .insert({
-        user_id: user.id,
-        snippet_id,
-        mode,
-        wpm: parseFloat(wpm),
-        accuracy: parseFloat(accuracy),
-        elapsed_ms: parseInt(elapsed_ms)
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Insert attempt error:', error);
-      return res.status(500).json({ error: 'failed to store attempt' });
-    }
-    
-    return res.status(200).json({ success: true, attempt_id: data.id });
-    
-  } catch (err) {
-    console.error('Attempt API error:', err);
-    return res.status(500).json({ 
-      error: err.message || 'server error',
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    });
-  }
-});
-
-app.get('/api/leaderboard/daily', (req, res) => {
-  res.status(200).json({ message: 'Daily leaderboard endpoint - placeholder' });
-});
-
-app.get('/api/leaderboard/alltime', (req, res) => {
-  res.status(200).json({ message: 'All-time leaderboard endpoint - placeholder' });
-});
-
-app.get('/api/practice/random', async (req, res) => {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  try {
-    const { createClient } = await import('@supabase/supabase-js');
-    
-    const url = process.env.SUPABASE_URL;
-    const anon = process.env.SUPABASE_ANON_KEY;
-    
-    if (!url) return res.status(500).json({ error: 'supabaseUrl is required.' });
-    if (!anon) return res.status(500).json({ error: 'supabaseAnonKey is required.' });
-    
-    const supabase = createClient(url, anon, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    
-    // Get language filter from query params
-    const { language } = req.query;
-    
-    // Build query
-    let query = supabase
-      .from('snippets')
-      .select('id, language, content')
-      .eq('is_practice', true);
-    
-    // Add language filter if specified
-    if (language && language !== 'all') {
-      query = query.eq('language', language);
-    }
-    
-    const { data, error } = await query.limit(50);
-    
-    if (error) throw error;
-    if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'no practice snippets' });
-    }
-    
-    // Pick a random snippet
-    const pick = data[Math.floor(Math.random() * data.length)];
-    return res.status(200).json({ snippet: pick });
-    
-  } catch (err) {
-    console.error('Practice API error:', err);
-    return res.status(500).json({ 
-      error: err.message || 'server error',
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    });
-  }
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', message: 'dev server running' });
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 API Server running on http://localhost:${PORT}`);
-  console.log(`📍 Test daily endpoint: http://localhost:${PORT}/api/daily`);
+  console.log(`🚀 Dev API server running on http://localhost:${PORT}`);
+  loadApiRoutes();
 });
