@@ -32,7 +32,7 @@ export const Profile: React.FC = () => {
             .from('profiles')
             .select('username, avatar_url')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
           
           if (profileError) {
             console.log('Profile not found or table not accessible:', profileError);
@@ -54,7 +54,7 @@ export const Profile: React.FC = () => {
           .from('user_stats')
           .select('avg_wpm, avg_accuracy, total_attempts')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         
         if (error) {
           console.log('No stats found for user:', error);
