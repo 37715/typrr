@@ -58,7 +58,7 @@ export default async function handler(req: any, res: any) {
       const { data: countData, error: countErr } = await supabase
         .from('attempts')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', auth.user.id)
+        .eq('user_id', user.id)
         .eq('mode', 'daily')
         .gte('created_at', today + 'T00:00:00Z')
         .lte('created_at', today + 'T23:59:59Z');

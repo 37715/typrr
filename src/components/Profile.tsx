@@ -2,13 +2,20 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/toast';
 import { GetStartedButton } from '@/components/ui/get-started-button';
+import { Trophy, Zap, Target, Crown, Star, Gem, Edit2, Upload, Check, X, User } from 'lucide-react';
 
 export const Profile: React.FC = () => {
   const [email, setEmail] = useState<string>('');
   const [username, setUsername] = useState<string>('');
+  const [customUsername, setCustomUsername] = useState<string>('');
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
   const [avgWpm, setAvgWpm] = useState<number | null>(null);
   const [avgAcc, setAvgAcc] = useState<number | null>(null);
-  const [xp, setXp] = useState<number | null>(null);
+  const [totalAttempts, setTotalAttempts] = useState<number>(0);
+  const [xp, setXp] = useState<number>(0);
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [tempUsername, setTempUsername] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -19,6 +26,29 @@ export const Profile: React.FC = () => {
       setUsername(user?.user_metadata?.user_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'user');
       
       if (user) {
+        // Fetch user profile (username and avatar)
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .eq('id', user.id)
+            .single();
+          
+          if (profileError) {
+            console.log('Profile not found or table not accessible:', profileError);
+            // Initialize with default values
+            setCustomUsername('');
+            setAvatarUrl('');
+            setTempUsername('');
+          } else if (profile) {
+            setCustomUsername(profile.username || '');
+            setAvatarUrl(profile.avatar_url || '');
+            setTempUsername(profile.username || '');
+          }
+        } catch (error) {
+          console.log('Error fetching profile:', error);
+        }
+        
         // Fetch user stats from database
         const { data: stats, error } = await supabase
           .from('user_stats')
@@ -30,19 +60,25 @@ export const Profile: React.FC = () => {
           console.log('No stats found for user:', error);
           setAvgWpm(null);
           setAvgAcc(null);
+          setTotalAttempts(0);
           setXp(0);
         } else if (stats) {
           console.log('User stats found:', stats);
           setAvgWpm(stats.avg_wpm);
           setAvgAcc(stats.avg_accuracy);
-          // Simple XP calculation based on attempts and performance
-          const xpFromPerformance = stats.avg_wpm * (stats.avg_accuracy / 100) * 10;
-          const xpFromAttempts = stats.total_attempts * 5;
-          setXp(Math.round(xpFromPerformance + xpFromAttempts));
+          setTotalAttempts(stats.total_attempts || 0);
+          // Calculate XP: each completed challenge gives base XP + performance bonus
+          const baseXpPerAttempt = 5; // Base XP per challenge
+          const performanceMultiplier = stats.avg_wpm && stats.avg_accuracy 
+            ? (stats.avg_wpm * (stats.avg_accuracy / 100)) / 50 // Normalize to ~1-3x multiplier
+            : 1;
+          const calculatedXp = Math.round((stats.total_attempts || 0) * baseXpPerAttempt * Math.max(0.5, Math.min(3, performanceMultiplier)));
+          setXp(calculatedXp);
         } else {
           console.log('Stats query returned no data');
           setAvgWpm(null);
           setAvgAcc(null);
+          setTotalAttempts(0);
           setXp(0);
         }
       }
@@ -59,15 +95,184 @@ export const Profile: React.FC = () => {
     window.location.href = '/daily';
   };
 
+  const handleUsernameUpdate = async () => {
+    if (!tempUsername.trim() || tempUsername.trim().length < 3) {
+      toast({ variant: 'error', title: 'username too short', description: 'must be at least 3 characters' });
+      return;
+    }
+
+    setIsLoading(true);
+    const { data } = await supabase.auth.getUser();
+    const user = data.user;
+    
+    if (user) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .upsert({ 
+            id: user.id, 
+            username: tempUsername.trim().toLowerCase(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        
+        if (error) {
+          console.error('Profile upsert error:', error);
+          if (error.code === '23505') { // Unique constraint violation
+            toast({ variant: 'error', title: 'username taken', description: 'please choose a different username' });
+          } else if (error.code === '42P01') { // Table doesn't exist
+            toast({ variant: 'error', title: 'database not ready', description: 'please run the SQL migration first' });
+          } else {
+            toast({ variant: 'error', title: 'update failed', description: `${error.message}` });
+          }
+        } else {
+          setCustomUsername(tempUsername.trim().toLowerCase());
+          setIsEditingUsername(false);
+          toast({ variant: 'success', title: 'username updated' });
+        }
+      } catch (err) {
+        console.error('Username update error:', err);
+        toast({ variant: 'error', title: 'update failed', description: 'please try again' });
+      }
+    }
+    setIsLoading(false);
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({ variant: 'error', title: 'invalid file', description: 'please select an image file' });
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ variant: 'error', title: 'file too large', description: 'please select an image under 2MB' });
+      return;
+    }
+
+    setIsLoading(true);
+    const { data } = await supabase.auth.getUser();
+    const user = data.user;
+    
+    if (user) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}.${fileExt}`;
+      
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+      
+      if (uploadError) {
+        toast({ variant: 'error', title: 'upload failed', description: 'please try again' });
+      } else {
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+        
+        // Update profile
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .upsert({ 
+            id: user.id, 
+            avatar_url: urlData.publicUrl,
+            updated_at: new Date().toISOString()
+          });
+        
+        if (updateError) {
+          toast({ variant: 'error', title: 'profile update failed', description: 'please try again' });
+        } else {
+          setAvatarUrl(urlData.publicUrl);
+          toast({ variant: 'success', title: 'profile picture updated' });
+        }
+      }
+    }
+    setIsLoading(false);
+  };
+
   return (
     <div className="max-w-3xl mx-auto">
       <h2 className="text-center text-zinc-700 dark:text-zinc-300 mb-6">profile</h2>
       <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 bg-white/60 dark:bg-zinc-900/60">
-        <div className="text-zinc-700 dark:text-zinc-200 mb-1">{username}</div>
-        <div className="text-zinc-500 dark:text-zinc-400 mb-6 text-sm">{email}</div>
+        {/* Profile Picture and Username */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <User size={24} className="text-zinc-500" />
+              )}
+            </div>
+            <label className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-colors">
+              <Upload size={12} className="text-white" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className="hidden"
+                disabled={isLoading}
+              />
+            </label>
+          </div>
+          
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              {isEditingUsername ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="text"
+                    value={tempUsername}
+                    onChange={(e) => setTempUsername(e.target.value)}
+                    className="flex-1 px-2 py-1 text-lg font-medium bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter username"
+                    maxLength={20}
+                    disabled={isLoading}
+                  />
+                  <button
+                    onClick={handleUsernameUpdate}
+                    disabled={isLoading}
+                    className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
+                  >
+                    <Check size={16} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditingUsername(false);
+                      setTempUsername(customUsername);
+                    }}
+                    disabled={isLoading}
+                    className="p-1 text-red-600 hover:text-red-700 disabled:opacity-50"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-xl font-medium text-zinc-700 dark:text-zinc-200">
+                    {customUsername || username}
+                  </span>
+                  <button
+                    onClick={() => setIsEditingUsername(true)}
+                    className="p-1 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                </div>
+              )}
+              <LevelIcon xp={xp} />
+            </div>
+            <div className="text-zinc-500 dark:text-zinc-400 text-sm">{email}</div>
+          </div>
+        </div>
 
         <div className="grid grid-cols-3 gap-4 mb-8">
-          <LevelCard avgWpm={avgWpm} avgAcc={avgAcc} xp={xp} />
+          <LevelCard xp={xp} />
           <Stat label="average wpm" value={avgWpm !== null ? Math.round(avgWpm).toString() : '—'} />
           <Stat label="average accuracy" value={avgAcc !== null ? `${Math.round(avgAcc)}%` : '—'} />
         </div>
@@ -87,55 +292,86 @@ const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   </div>
 );
 
-function computeLevel(avgWpm: number | null, avgAcc: number | null) {
-  if (avgWpm == null || avgAcc == null) return '—';
-  const score = avgWpm * (avgAcc / 100);
-  // Basic tiers; later we can base this on attempts volume, streaks etc.
-  if (score >= 220) return 'legend';
-  if (score >= 160) return 'master';
-  if (score >= 120) return 'pro';
-  if (score >= 80) return 'advanced';
-  if (score >= 40) return 'intermediate';
-  return 'novice';
-}
-
-const LevelCard: React.FC<{ avgWpm: number | null; avgAcc: number | null; xp: number | null }> = ({ avgWpm, avgAcc, xp }) => {
-  if (avgWpm == null || avgAcc == null) {
-    return <Stat label="level" value="—" />;
-  }
-  const score = avgWpm * (avgAcc / 100);
-  const tiers = [
-    { name: 'novice', cap: 40 },
-    { name: 'intermediate', cap: 80 },
-    { name: 'advanced', cap: 120 },
-    { name: 'pro', cap: 160 },
-    { name: 'master', cap: 220 },
-    { name: 'legend', cap: Infinity },
+function getLevelInfo(xp: number) {
+  // XP thresholds: 20 challenges = 100 XP, 100 = 500 XP, 500 = 2500 XP, 1000 = 5000 XP
+  // Assuming 5 XP per challenge on average
+  const levels = [
+    { name: 'novice', icon: Zap, threshold: 0, color: 'text-gray-500' },
+    { name: 'intermediate', icon: Target, threshold: 100, color: 'text-blue-500' }, // ~20 challenges
+    { name: 'advanced', icon: Trophy, threshold: 500, color: 'text-purple-500' }, // ~100 challenges
+    { name: 'expert', icon: Crown, threshold: 2500, color: 'text-orange-500' }, // ~500 challenges
+    { name: 'master', icon: Star, threshold: 5000, color: 'text-yellow-500' }, // ~1000 challenges
+    { name: 'legend', icon: Gem, threshold: 12500, color: 'text-pink-500' } // ~2500 challenges
   ];
-  let current = tiers[0];
-  let next = tiers[1];
-  for (let i = 0; i < tiers.length; i++) {
-    if (score < tiers[i].cap) {
-      current = tiers[Math.max(0, i - 1)];
-      next = tiers[i];
+  
+  let currentLevel = levels[0];
+  let nextLevel = levels[1];
+  
+  for (let i = 0; i < levels.length; i++) {
+    if (xp >= levels[i].threshold) {
+      currentLevel = levels[i];
+      nextLevel = levels[i + 1] || levels[i];
+    } else {
       break;
     }
   }
-  const base = current.cap === 40 ? 0 : current.cap;
-  const cap = next.cap === Infinity ? base + 40 : next.cap;
-  const progress = Math.min(1, Math.max(0, (score - base) / (cap - base)));
-  const xpVal = xp ?? Math.round(score * 10);
-  const xpNeeded = Math.max(0, Math.round((cap - score) * 10));
+  
+  return { currentLevel, nextLevel };
+}
+
+const LevelIcon: React.FC<{ xp: number; size?: 'sm' | 'md' }> = ({ xp, size = 'sm' }) => {
+  const { currentLevel } = getLevelInfo(xp);
+  const Icon = currentLevel.icon;
+  const iconSize = size === 'sm' ? 16 : 20;
+  
+  return (
+    <Icon 
+      size={iconSize} 
+      className={`${currentLevel.color} flex-shrink-0`}
+    />
+  );
+};
+
+const LevelCard: React.FC<{ xp: number }> = ({ xp }) => {
+  const { currentLevel, nextLevel } = getLevelInfo(xp);
+  const CurrentIcon = currentLevel.icon;
+  
+  // Calculate progress to next level
+  const progress = nextLevel.threshold > currentLevel.threshold 
+    ? Math.min(1, (xp - currentLevel.threshold) / (nextLevel.threshold - currentLevel.threshold))
+    : 1;
+  
+  const xpNeeded = nextLevel.threshold > currentLevel.threshold 
+    ? Math.max(0, nextLevel.threshold - xp)
+    : 0;
 
   return (
     <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white/50 dark:bg-zinc-900/50">
-      <div className="flex items-baseline justify-between mb-2">
-        <div className="text-2xl font-mono text-zinc-900 dark:text-white">{computeLevel(avgWpm, avgAcc)}</div>
-        <div className="text-xs text-zinc-500 dark:text-zinc-400">xp {xpVal} / +{xpNeeded}</div>
+      <div className="flex items-center gap-2 mb-3">
+        <CurrentIcon size={24} className={`${currentLevel.color} flex-shrink-0`} />
+        <div className="text-2xl font-mono text-zinc-900 dark:text-white lowercase">{currentLevel.name}</div>
       </div>
-      <div className="h-2 w-full rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
-        <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400" style={{ width: `${progress * 100}%` }} />
-      </div>
+      
+      {nextLevel.threshold > currentLevel.threshold ? (
+        <>
+          <div className="h-2 w-full rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden mb-2">
+            <div 
+              className="h-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-300" 
+              style={{ width: `${progress * 100}%` }} 
+            />
+          </div>
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 text-center">
+            {xp} / {nextLevel.threshold} XP ({xpNeeded} to go)
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="h-2 w-full rounded-full bg-gradient-to-r from-yellow-500 to-orange-400 mb-2" />
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 text-center">
+            {xp} XP earned
+          </div>
+        </>
+      )}
     </div>
   );
 };
