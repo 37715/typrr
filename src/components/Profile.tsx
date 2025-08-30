@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/toast';
 import { GetStartedButton } from '@/components/ui/get-started-button';
+import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
 import { Trophy, Zap, Target, Crown, Star, Gem, Edit2, Upload, Check, X, User } from 'lucide-react';
 
 export const Profile: React.FC = () => {
@@ -17,10 +18,14 @@ export const Profile: React.FC = () => {
   const [tempUsername, setTempUsername] = useState<string>('');
   const [usernameValidation, setUsernameValidation] = useState({ available: true, message: '', checking: false });
   const [isLoading, setIsLoading] = useState(false);
+  const [profileInitialized, setProfileInitialized] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
     (async () => {
+      if (profileInitialized) return; // Prevent double initialization
+      
       const { data } = await supabase.auth.getUser();
       const user = data.user;
       setEmail(user?.email ?? '');
@@ -96,25 +101,44 @@ export const Profile: React.FC = () => {
               }
             }
           } else {
-            // No profile found, create one automatically
+            // No profile found, create one automatically using upsert to handle duplicates
             console.log('No profile found for user, creating profile with random username');
             try {
               const { data: randomUsername, error: randomError } = await supabase
                 .rpc('generate_random_username');
 
               if (!randomError && randomUsername) {
-                const { error: createError } = await supabase
+                const { data: upsertResult, error: createError } = await supabase
                   .from('profiles')
-                  .insert({
+                  .upsert({
                     id: user.id,
                     username: randomUsername,
                     created_at: new Date().toISOString()
-                  });
+                  }, {
+                    onConflict: 'id'
+                  })
+                  .select('username')
+                  .single();
 
-                if (!createError) {
-                  setCustomUsername(randomUsername);
-                  setTempUsername(randomUsername);
-                  console.log('Auto-created profile with username:', randomUsername);
+                if (!createError && upsertResult) {
+                  setCustomUsername(upsertResult.username);
+                  setTempUsername(upsertResult.username);
+                  console.log('Auto-created/updated profile with username:', upsertResult.username);
+                } else if (createError && createError.code === '23505') {
+                  // Profile already exists, fetch it
+                  console.log('Profile already exists, fetching existing profile');
+                  const { data: existingProfiles } = await supabase
+                    .from('profiles')
+                    .select('username, avatar_url')
+                    .eq('id', user.id);
+                  
+                  if (existingProfiles && existingProfiles.length > 0) {
+                    const existingProfile = existingProfiles[0];
+                    setCustomUsername(existingProfile.username || '');
+                    setTempUsername(existingProfile.username || '');
+                    setAvatarUrl(existingProfile.avatar_url || '');
+                    console.log('Using existing profile:', existingProfile.username);
+                  }
                 } else {
                   console.error('Auto profile creation failed:', createError);
                   setCustomUsername('');
@@ -169,8 +193,10 @@ export const Profile: React.FC = () => {
           setXp(0);
         }
       }
+      
+      setProfileInitialized(true);
     })();
-  }, []);
+  }, [profileInitialized]);
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -180,6 +206,62 @@ export const Profile: React.FC = () => {
     }
     toast({ variant: 'success', title: 'signed out' });
     window.location.href = '/daily';
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsLoading(true);
+    const { data } = await supabase.auth.getUser();
+    const user = data.user;
+    
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Delete user data in the correct order (child tables first)
+      console.log('deleting user data...');
+      
+      // Delete user stats
+      await supabase
+        .from('user_stats')
+        .delete()
+        .eq('user_id', user.id);
+      
+      // Delete profile
+      await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+
+      // Delete the user account itself (this requires service role)
+      // Since we can't delete auth users from client, we'll call an API endpoint
+      const response = await fetch('/api/delete-user', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        },
+        body: JSON.stringify({ user_id: user.id })
+      });
+
+      if (response.ok) {
+        toast({ variant: 'success', title: 'account deleted', description: 'your account has been permanently deleted' });
+        // Sign out and redirect
+        await supabase.auth.signOut();
+        window.location.href = '/daily';
+      } else {
+        // If API deletion fails, at least the profile data is gone
+        toast({ variant: 'success', title: 'data deleted', description: 'your profile data has been deleted. you may need to contact support to fully delete your account.' });
+        await supabase.auth.signOut();
+        window.location.href = '/daily';
+      }
+    } catch (error) {
+      console.error('account deletion error:', error);
+      toast({ variant: 'error', title: 'deletion failed', description: 'please try again or contact support' });
+    }
+    
+    setIsLoading(false);
   };
 
   // Real-time username validation
@@ -504,8 +586,22 @@ export const Profile: React.FC = () => {
 
         <div className="flex justify-between items-center">
           <GetStartedButton onClick={handleSignOut} label="sign out" />
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            disabled={isLoading}
+            className="px-4 py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          >
+            delete account
+          </button>
         </div>
       </div>
+      
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteAccount}
+        isDeleting={isLoading}
+      />
     </div>
   );
 };
