@@ -27,20 +27,14 @@ function App() {
   const handleTypingStart = () => {};
 
   const handleTypingComplete = () => {
-    // Refresh leaderboard when someone completes a challenge
+    // Refresh leaderboard when someone completes a challenge - but only once
     const isDailyMode = window.location.pathname.includes('daily');
-    if (isDailyMode) {
-      // Clear any existing timeout to prevent multiple refreshes
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-      }
-      
-      // Delay the refresh to allow the attempt to be saved to the database first
-      // This prevents race conditions and gives the API time to process the submission
+    if (isDailyMode && !refreshTimeoutRef.current) {
+      // Only set timeout if one doesn't already exist
       refreshTimeoutRef.current = setTimeout(() => {
         setLeaderboardRefresh(prev => prev + 1);
         refreshTimeoutRef.current = null;
-      }, 2000); // Wait 2 seconds before refreshing leaderboard
+      }, 2000); // Wait 2 seconds before refreshing leaderboard once
     }
   };
 

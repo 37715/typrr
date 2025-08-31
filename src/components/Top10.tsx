@@ -82,12 +82,8 @@ export const Top10: React.FC<Top10Props> = ({ className = '', refreshTrigger }) 
   // Watch for refresh trigger changes with debouncing
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger > 0) {
-      // Add a small delay to prevent multiple rapid refreshes
-      const timeoutId = setTimeout(() => {
-        fetchLeaderboard(true); // Pass true to indicate this is a refresh
-      }, 500);
-      
-      return () => clearTimeout(timeoutId);
+      // Only refresh once per trigger change
+      fetchLeaderboard(true);
     }
   }, [refreshTrigger]);
 
@@ -197,14 +193,18 @@ export const Top10: React.FC<Top10Props> = ({ className = '', refreshTrigger }) 
                         {entry.username}
                       </span>
                       {(() => {
-                        const level = getLevelFromXP(entry.total_xp);
+                        // Calculate XP if not provided by API
+                        const xpValue = entry.total_xp || (entry.total_attempts ? (entry.total_attempts * 5) * ((entry.wpm * (entry.accuracy || 100) / 100) / 50) : 150);
+                        const level = getLevelFromXP(xpValue);
                         const LevelIcon = level.icon;
                         return (
-                          <LevelIcon 
-                            size={14} 
-                            className={`${level.color} flex-shrink-0`} 
-                            title={level.name}
-                          />
+                          <>
+                            <LevelIcon 
+                              size={14} 
+                              className={`${level.color} flex-shrink-0`} 
+                              title={level.name}
+                            />
+                          </>
                         );
                       })()}
                     </div>
@@ -254,14 +254,17 @@ export const Top10: React.FC<Top10Props> = ({ className = '', refreshTrigger }) 
                   <div className="flex items-center gap-2 text-sm font-medium text-zinc-800 dark:text-white truncate max-w-[120px]">
                     {entry.username}
                     {(() => {
-                      const level = getLevelFromXP(entry.total_xp);
+                      const xpValue = entry.total_xp || (entry.total_attempts ? (entry.total_attempts * 5) * ((entry.wpm * (entry.accuracy || 100) / 100) / 50) : 150);
+                      const level = getLevelFromXP(xpValue);
                       const LevelIcon = level.icon;
                       return (
-                        <LevelIcon 
-                          size={12} 
-                          className={`${level.color} flex-shrink-0`} 
-                          title={level.name}
-                        />
+                        <>
+                          <LevelIcon 
+                            size={12} 
+                            className={`${level.color} flex-shrink-0`} 
+                            title={level.name}
+                          />
+                        </>
                       );
                     })()}
                   </div>

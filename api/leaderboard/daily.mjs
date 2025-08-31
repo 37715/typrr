@@ -108,7 +108,7 @@ export default async function handler(req, res) {
         // For now, set everyone to intermediate level (150 XP) to match profile
         let calculatedXp = 150;
         
-        return {
+        const result = {
           rank: index + 1,
           user_id: attempt.user_id,
           username: profile?.username || 'anonymous',
@@ -120,6 +120,8 @@ export default async function handler(req, res) {
           total_xp: calculatedXp,
           created_at: attempt.created_at
         };
+        console.log(`🔍 API returning for ${result.username}: total_xp=${result.total_xp}`);
+        return result;
       });
     
     console.log(`✅ Daily leaderboard retrieved: ${leaderboard.length} entries`);

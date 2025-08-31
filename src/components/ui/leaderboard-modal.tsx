@@ -114,14 +114,17 @@ export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [] 
                           <img src={e.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(e.username)}`} className="h-8 w-8 rounded-full" alt="avatar" />
                           <span className="text-sm">{e.username}</span>
                           {(() => {
-                            const level = getLevelFromXP(e.totalXp || 0);
+                            const xpValue = e.totalXp || (e.totalAttempts ? (e.totalAttempts * 5) * ((e.wpm * (e.accuracy || 100) / 100) / 50) : 150);
+                            const level = getLevelFromXP(xpValue);
                             const LevelIcon = level.icon;
                             return (
-                              <LevelIcon 
-                                size={14} 
-                                className={`${level.color} flex-shrink-0`} 
-                                title={level.name}
-                              />
+                              <>
+                                <LevelIcon 
+                                  size={14} 
+                                  className={`${level.color} flex-shrink-0`} 
+                                  title={level.name}
+                                />
+                              </>
                             );
                           })()}
                         </div>
