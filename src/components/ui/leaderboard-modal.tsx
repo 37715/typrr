@@ -118,13 +118,11 @@ export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [] 
                             const level = getLevelFromXP(xpValue);
                             const LevelIcon = level.icon;
                             return (
-                              <>
-                                <LevelIcon 
-                                  size={14} 
-                                  className={`${level.color} flex-shrink-0`} 
-                                  title={level.name}
-                                />
-                              </>
+                              <LevelIcon 
+                                size={14} 
+                                className={`${level.color} flex-shrink-0`} 
+                                title={level.name}
+                              />
                             );
                           })()}
                         </div>

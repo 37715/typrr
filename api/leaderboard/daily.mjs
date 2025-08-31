@@ -105,8 +105,10 @@ export default async function handler(req, res) {
         const profile = profilesMap[attempt.user_id];
         const stats = statsMap[attempt.user_id];
         
-        // For now, set everyone to intermediate level (150 XP) to match profile
-        let calculatedXp = 150;
+        // Calculate XP based on stats or use default calculation
+        let calculatedXp = stats?.total_attempts ? 
+          (stats.total_attempts * 5) * ((stats.avg_wpm * stats.avg_accuracy / 100) / 50) : 
+          150;
         
         const result = {
           rank: index + 1,
@@ -120,7 +122,6 @@ export default async function handler(req, res) {
           total_xp: calculatedXp,
           created_at: attempt.created_at
         };
-        console.log(`🔍 API returning for ${result.username}: total_xp=${result.total_xp}`);
         return result;
       });
     

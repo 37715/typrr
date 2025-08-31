@@ -47,7 +47,7 @@ function App() {
 
   const handleLanguageChange = (language: string) => {
     setSelectedLanguage(language);
-    setRefreshTrigger(prev => prev + 1); // Trigger a reload with new language filter
+    // No need to manually trigger refresh - the useEffect will handle it when selectedLanguage changes
   };
 
   // Cleanup timeout on unmount
@@ -73,10 +73,13 @@ function App() {
           endpoint += `?language=${selectedLanguage}`;
         }
         
+        console.log('🔍 Loading snippet with endpoint:', endpoint, 'selectedLanguage:', selectedLanguage);
+        
         const response = await fetch(endpoint);
         
         if (response.ok) {
           const data = await response.json();
+          console.log('🔍 Received snippet:', data.snippet.language, 'ID:', data.snippet.id);
           const normalizedContent = normalizeSnippetContent(data.snippet.content);
           setSnippetContent(normalizedContent);
           setSnippetId(data.snippet.id);

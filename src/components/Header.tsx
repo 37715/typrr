@@ -18,16 +18,18 @@ export const Header: React.FC = () => {
       const response = await fetch('/api/leaderboard/daily');
       if (response.ok) {
         const data = await response.json();
-        const formattedData = data.leaderboard?.map((entry: any) => ({
-          id: entry.user_id,
-          username: entry.username,
-          avatarUrl: entry.avatar_url,
-          wpm: entry.wpm,
-          accuracy: entry.accuracy,
-          timeMs: entry.elapsed_ms,
-          totalAttempts: entry.total_attempts,
-          totalXp: entry.total_xp
-        })) || [];
+        const formattedData = data.leaderboard?.map((entry: any) => {
+          return {
+            id: entry.user_id,
+            username: entry.username,
+            avatarUrl: entry.avatar_url,
+            wpm: entry.wpm,
+            accuracy: entry.accuracy,
+            timeMs: entry.elapsed_ms,
+            totalAttempts: entry.total_attempts,
+            totalXp: entry.total_xp || (entry.total_attempts ? (entry.total_attempts * 5) * ((entry.wpm * (entry.accuracy || 100) / 100) / 50) : 150)
+          };
+        }) || [];
         setDailyData(formattedData);
       }
     } catch (error) {
