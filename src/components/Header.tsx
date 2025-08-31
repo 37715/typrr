@@ -24,7 +24,9 @@ export const Header: React.FC = () => {
           avatarUrl: entry.avatar_url,
           wpm: entry.wpm,
           accuracy: entry.accuracy,
-          timeMs: entry.elapsed_ms
+          timeMs: entry.elapsed_ms,
+          totalAttempts: entry.total_attempts,
+          totalXp: entry.total_xp
         })) || [];
         setDailyData(formattedData);
       }

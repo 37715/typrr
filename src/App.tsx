@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { CodeTypingPanel } from './components/CodeTypingPanel';
@@ -14,6 +14,7 @@ function App() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Function to normalize snippet content - handles escaped newlines and Windows line endings
   const normalizeSnippetContent = (content: string): string => {
@@ -29,7 +30,17 @@ function App() {
     // Refresh leaderboard when someone completes a challenge
     const isDailyMode = window.location.pathname.includes('daily');
     if (isDailyMode) {
-      setLeaderboardRefresh(prev => prev + 1);
+      // Clear any existing timeout to prevent multiple refreshes
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      
+      // Delay the refresh to allow the attempt to be saved to the database first
+      // This prevents race conditions and gives the API time to process the submission
+      refreshTimeoutRef.current = setTimeout(() => {
+        setLeaderboardRefresh(prev => prev + 1);
+        refreshTimeoutRef.current = null;
+      }, 2000); // Wait 2 seconds before refreshing leaderboard
     }
   };
 
@@ -44,6 +55,15 @@ function App() {
     setSelectedLanguage(language);
     setRefreshTrigger(prev => prev + 1); // Trigger a reload with new language filter
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const loadSnippet = async () => {
@@ -104,7 +124,7 @@ function App() {
     <div className="min-h-screen flex flex-col lowercase bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 transition-colors duration-300">
       <Header />
       
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         <div className="w-full space-y-8">
           <Routes>
             <Route path="/daily" element={
@@ -115,23 +135,21 @@ function App() {
                     {apiError}
                   </div>
                 )}
-                <div className="relative">
-                  <div className="max-w-4xl mx-auto">
-                    <CodeTypingPanel
-                      snippet={snippetContent}
-                      snippetId={snippetId}
-                      onComplete={handleTypingComplete}
-                      onStart={handleTypingStart}
-                      onReset={handleReset}
-                      onRefresh={handleRefresh}
-                    />
-                  </div>
-                  <div className="hidden lg:block absolute right-4 top-9 w-96 xl:w-[28rem]">
-                    <Top10 refreshTrigger={leaderboardRefresh} />
-                  </div>
-                  <div className="lg:hidden mt-8">
-                    <Top10 refreshTrigger={leaderboardRefresh} />
-                  </div>
+                {/* Main content container - responsive width */}
+                <div className="max-w-4xl mx-auto">
+                  <CodeTypingPanel
+                    snippet={snippetContent}
+                    snippetId={snippetId}
+                    onComplete={handleTypingComplete}
+                    onStart={handleTypingStart}
+                    onReset={handleReset}
+                    onRefresh={handleRefresh}
+                  />
+                </div>
+                
+                {/* Leaderboard - shows below main content for all screen sizes */}
+                <div className="mt-8 max-w-4xl mx-auto">
+                  <Top10 refreshTrigger={leaderboardRefresh} />
                 </div>
               </>
             } />

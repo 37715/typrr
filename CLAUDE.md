@@ -155,6 +155,53 @@ The daily challenge features a comprehensive leaderboard system with two main co
 - **Top10 positioning**: Use `absolute` positioning so it doesn't affect main content
 - **No layout interference**: Top10 should never push or move the main typing interface
 
+## Common Pitfalls & Error-Causing Issues
+
+### Vercel Deployment Errors
+**Conflicting File Extensions**: Vercel fails if you have files with same name but different extensions
+- ❌ WRONG: `api/leaderboard/daily.ts` AND `api/leaderboard/daily.mjs`
+- ✅ CORRECT: Only keep one version (prefer `.mjs` for Vercel compatibility)
+- **Error Message**: "Two or more files have conflicting paths or names"
+
+**ES Module Requirements**: API endpoints MUST use ES modules for Vercel
+- ❌ WRONG: `module.exports = handler` (CommonJS)
+- ✅ CORRECT: `export default async function handler()` (ES modules)
+- **File Extensions**: Use `.mjs` or ensure `package.json` has `"type": "module"`
+
+### React Component Refresh Issues
+**Key vs Props for Re-rendering**: Using `key={}` causes component remounting
+- ❌ WRONG: `<Component key={refreshTrigger} />` → Component blanks out during refresh
+- ✅ CORRECT: `<Component refreshTrigger={refreshTrigger} />` → Component data refreshes smoothly
+- **Why**: Key changes force React to destroy and recreate component
+
+### Database Query Pitfalls
+**Supabase Single vs Maybe**: Wrong method causes 406 errors when no data exists
+- ❌ WRONG: `.single()` → Throws error if no rows found
+- ✅ CORRECT: `.maybeSingle()` → Returns null if no rows, doesn't throw
+
+**RLS (Row Level Security)**: Use service role key for admin operations
+- ❌ WRONG: Using anon key for user deletion/admin tasks
+- ✅ CORRECT: `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS for admin operations
+
+### Layout/CSS Issues That Break Design
+**Flex Layout Pushing Content**: Common centering mistakes
+- ❌ WRONG: `justify-center` with flex items pushes main content left
+- ✅ CORRECT: Use `absolute` positioning for sidebars to avoid affecting main content
+- **Problem**: Side elements in flex layouts shift the center reference point
+
+**Component Remounting**: Don't use changing values as React keys unless you want remounting
+- **Symptom**: Loading states appearing unnecessarily, data blanking out
+- **Fix**: Use props instead of keys for data updates
+
+### API Development Gotchas
+**CORS Issues**: Dev server needs proper CORS setup
+- **File**: `dev-server.js` must include frontend origins in CORS config
+- **Origins**: `['http://localhost:5173', 'http://127.0.0.1:5173']`
+
+**Missing Environment Variables**: API calls fail silently
+- **Check**: `.env.local` file exists and has all required Supabase keys
+- **Dev vs Prod**: Different environment variable loading between local and Vercel
+
 ## Component Details
 
 ### Profile.tsx

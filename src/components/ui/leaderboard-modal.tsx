@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
+import { Play, Zap, Target, Trophy, Crown, Star, Gem } from 'lucide-react';
 
 type Entry = {
   id: string;
@@ -8,6 +9,28 @@ type Entry = {
   avatarUrl?: string;
   wpm: number;
   timeMs: number;
+  totalAttempts?: number;
+  totalXp?: number;
+};
+
+const levels = [
+  { name: 'novice', icon: Zap, threshold: 0, color: 'text-gray-500' },
+  { name: 'intermediate', icon: Target, threshold: 100, color: 'text-blue-500' },
+  { name: 'advanced', icon: Trophy, threshold: 500, color: 'text-purple-500' },
+  { name: 'expert', icon: Crown, threshold: 2500, color: 'text-orange-500' },
+  { name: 'master', icon: Star, threshold: 5000, color: 'text-yellow-500' },
+  { name: 'legend', icon: Gem, threshold: 12500, color: 'text-pink-500' }
+];
+
+const getLevelFromXP = (xp: number) => {
+  let currentLevel = levels[0];
+  for (let i = levels.length - 1; i >= 0; i--) {
+    if (xp >= levels[i].threshold) {
+      currentLevel = levels[i];
+      break;
+    }
+  }
+  return currentLevel;
 };
 
 type TabKey = 'daily' | 'alltime';
@@ -90,13 +113,31 @@ export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [] 
                         <div className="flex items-center gap-3">
                           <img src={e.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(e.username)}`} className="h-8 w-8 rounded-full" alt="avatar" />
                           <span className="text-sm">{e.username}</span>
+                          {(() => {
+                            const level = getLevelFromXP(e.totalXp || 0);
+                            const LevelIcon = level.icon;
+                            return (
+                              <LevelIcon 
+                                size={14} 
+                                className={`${level.color} flex-shrink-0`} 
+                                title={level.name}
+                              />
+                            );
+                          })()}
                         </div>
                       </td>
                       <td className="py-3 text-sm font-semibold">{Math.round(e.wpm)}</td>
                       <td className="py-3 text-sm">{e.accuracy ? Math.round(e.accuracy) : '-'}%</td>
                       <td className="py-3 text-sm">{(e.timeMs / 1000).toFixed(2)}s</td>
-                      <td className="py-3 text-right">
-                        <button className="px-3 py-1.5 rounded-lg text-sm border border-zinc-200 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-white/10">watch replay</button>
+                      <td className="py-3 text-center">
+                        <button 
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 rounded transition-colors cursor-not-allowed opacity-60"
+                          disabled
+                          title="replay feature coming soon"
+                        >
+                          <Play size={10} />
+                          replay
+                        </button>
                       </td>
                     </tr>
                   ))}

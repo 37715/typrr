@@ -72,11 +72,14 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'failed to fetch user profiles' });
     }
     
-    // Get user stats for total attempts (for level calculation)
+    // Get user stats for total attempts and averages (for level calculation)
+    console.log('🔍 Looking for user stats for user IDs:', userIds);
     const { data: userStats, error: statsError } = await supabase
       .from('user_stats')
-      .select('user_id, total_attempts')
+      .select('user_id, total_attempts, avg_wpm, avg_accuracy')
       .in('user_id', userIds);
+    
+    console.log('📊 User stats query result:', userStats, 'Error:', statsError);
     
     if (statsError) {
       console.error('Error fetching user stats:', statsError);
@@ -102,6 +105,9 @@ export default async function handler(req, res) {
         const profile = profilesMap[attempt.user_id];
         const stats = statsMap[attempt.user_id];
         
+        // For now, set everyone to intermediate level (150 XP) to match profile
+        let calculatedXp = 150;
+        
         return {
           rank: index + 1,
           user_id: attempt.user_id,
@@ -111,6 +117,7 @@ export default async function handler(req, res) {
           accuracy: attempt.accuracy,
           elapsed_ms: attempt.elapsed_ms,
           total_attempts: stats?.total_attempts || 0,
+          total_xp: calculatedXp,
           created_at: attempt.created_at
         };
       });

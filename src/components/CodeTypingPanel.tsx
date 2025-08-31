@@ -30,6 +30,9 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   const [hasStarted, setHasStarted] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [xpGained, setXpGained] = useState<number | null>(null);
+  const [showXpMessage, setShowXpMessage] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const snippetLines = snippet.split('\n');
@@ -145,6 +148,22 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     
     setUserInput(newValue);
   };
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getUser();
+      setIsLoggedIn(!!data.user);
+    };
+    
+    checkAuth();
+    
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session?.user);
+    });
+    
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   // Initialize attempts from localStorage for daily mode
   useEffect(() => {
@@ -407,6 +426,13 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     onRefresh();
   };
 
+  // Calculate XP gained for this attempt
+  const calculateXpGained = (wpmValue: number, accuracyValue: number) => {
+    const baseXpPerAttempt = 5; // Base XP per challenge
+    const performanceMultiplier = (wpmValue * (accuracyValue / 100)) / 50; // Normalize to ~1-3x multiplier
+    return Math.round(baseXpPerAttempt * Math.max(1, performanceMultiplier));
+  };
+
   // Submit attempt to server when complete
   useEffect(() => {
     console.log('isComplete changed to:', isComplete);
@@ -447,6 +473,16 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         
         const result = await response.json();
         console.log('Attempt response:', result);
+        
+        // Calculate and show XP gained for logged in users
+        if (isLoggedIn) {
+          const earnedXp = calculateXpGained(Math.round(wpm), finalAccuracy);
+          setXpGained(earnedXp);
+          setShowXpMessage(true);
+          
+          // Hide XP message after 4 seconds
+          setTimeout(() => setShowXpMessage(false), 4000);
+        }
       } catch (error) {
         console.error('Error submitting attempt:', error);
       }
@@ -593,10 +629,29 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
       )}
 
       {isComplete && !isLocked && (
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center space-y-3">
+          {/* Main completion message */}
           <div className="inline-flex items-center space-x-2 px-5 py-3 rounded-lg border lowercase bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-green-500/20 dark:text-green-300 dark:border-green-500/30">
             <span className="text-base font-medium">challenge complete</span>
           </div>
+          
+          {/* XP gained message for logged in users */}
+          {showXpMessage && isLoggedIn && xpGained && (
+            <div className="animate-in slide-in-from-bottom-2 duration-500">
+              <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg border lowercase bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/20">
+                <span className="text-sm font-medium">+{xpGained} xp earned</span>
+              </div>
+            </div>
+          )}
+          
+          {/* Login prompt for non-logged users on daily challenge */}
+          {isDailyMode && !isLoggedIn && (
+            <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg border lowercase bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/20">
+              <span className="text-sm">
+                <a href="/profile" className="underline hover:no-underline">sign in</a> to compete on the leaderboard
+              </span>
+            </div>
+          )}
         </div>
       )}
 
