@@ -189,9 +189,16 @@ export const Top10: React.FC<Top10Props> = ({ className = '', refreshTrigger }) 
                         className="h-6 w-6 rounded-full" 
                         alt="avatar" 
                       />
-                      <span className="text-sm font-medium text-zinc-800 dark:text-white truncate max-w-[120px]">
+                      <a 
+                        href={`/profile/${entry.username}`}
+                        className="text-sm font-medium text-zinc-800 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer truncate max-w-[120px]"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          window.location.href = `/profile/${entry.username}`;
+                        }}
+                      >
                         {entry.username}
-                      </span>
+                      </a>
                       {(() => {
                         // Calculate XP if not provided by API
                         const xpValue = entry.total_xp || (entry.total_attempts ? (entry.total_attempts * 5) * ((entry.wpm * (entry.accuracy || 100) / 100) / 50) : 150);
@@ -252,7 +259,16 @@ export const Top10: React.FC<Top10Props> = ({ className = '', refreshTrigger }) 
                 />
                 <div>
                   <div className="flex items-center gap-2 text-sm font-medium text-zinc-800 dark:text-white truncate max-w-[120px]">
-                    {entry.username}
+                    <a 
+                      href={`/profile/${entry.username}`}
+                      className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        window.location.href = `/profile/${entry.username}`;
+                      }}
+                    >
+                      {entry.username}
+                    </a>
                     {(() => {
                       const xpValue = entry.total_xp || (entry.total_attempts ? (entry.total_attempts * 5) * ((entry.wpm * (entry.accuracy || 100) / 100) / 50) : 150);
                       const level = getLevelFromXP(xpValue);

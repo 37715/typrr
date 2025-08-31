@@ -112,7 +112,16 @@ export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [] 
                       <td className="py-3">
                         <div className="flex items-center gap-3">
                           <img src={e.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(e.username)}`} className="h-8 w-8 rounded-full" alt="avatar" />
-                          <span className="text-sm">{e.username}</span>
+                          <a 
+                            href={`/profile/${e.username}`} 
+                            className="text-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              window.location.href = `/profile/${e.username}`;
+                            }}
+                          >
+                            {e.username}
+                          </a>
                           {(() => {
                             const xpValue = e.totalXp || (e.totalAttempts ? (e.totalAttempts * 5) * ((e.wpm * (e.accuracy || 100) / 100) / 50) : 150);
                             const level = getLevelFromXP(xpValue);
