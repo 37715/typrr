@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Trophy, Play, Zap, Target, Crown, Star, Gem } from 'lucide-react';
+import { Trophy, Play, Zap, Target, Crown, Star, Gem, Github } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface LeaderboardEntry {
   rank: number;
   user_id: string;
   username: string;
   avatar_url?: string;
+  github_id?: string;
+  github_username?: string;
+  github_avatar_url?: string;
   wpm: number;
   accuracy: number;
   elapsed_ms: number;
@@ -189,16 +193,50 @@ export const Top10: React.FC<Top10Props> = ({ className = '', refreshTrigger }) 
                         className="h-6 w-6 rounded-full" 
                         alt="avatar" 
                       />
-                      <a 
-                        href={`/profile/${entry.username}`}
-                        className="text-sm font-medium text-zinc-800 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer truncate max-w-[120px]"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          window.location.href = `/profile/${entry.username}`;
-                        }}
-                      >
-                        {entry.username}
-                      </a>
+                      <div className="flex items-center gap-1">
+                        <a 
+                          href={`/profile/${entry.username}`}
+                          className="text-sm font-medium text-zinc-800 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer truncate max-w-[100px]"
+                          onClick={async (event) => {
+                            event.preventDefault();
+                            
+                            // Check if this is the current user's own profile
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (user) {
+                              const { data: profile } = await supabase
+                                .from('profiles')
+                                .select('username')
+                                .eq('id', user.id)
+                                .maybeSingle();
+                              
+                              if (profile && profile.username === entry.username) {
+                                // Navigate to own profile
+                                window.location.href = '/profile';
+                              } else {
+                                // Navigate to other user's profile
+                                window.location.href = `/profile/${entry.username}`;
+                              }
+                            } else {
+                              // Not logged in, navigate to other user's profile
+                              window.location.href = `/profile/${entry.username}`;
+                            }
+                          }}
+                        >
+                          {entry.username}
+                        </a>
+                        {entry.github_id && entry.github_username && (
+                          <a
+                            href={`https://github.com/${entry.github_username}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                            title={`github: ${entry.github_username}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Github size={12} />
+                          </a>
+                        )}
+                      </div>
                       {(() => {
                         // Calculate XP if not provided by API
                         const xpValue = entry.total_xp || (entry.total_attempts ? (entry.total_attempts * 5) * ((entry.wpm * (entry.accuracy || 100) / 100) / 50) : 150);
@@ -259,16 +297,50 @@ export const Top10: React.FC<Top10Props> = ({ className = '', refreshTrigger }) 
                 />
                 <div>
                   <div className="flex items-center gap-2 text-sm font-medium text-zinc-800 dark:text-white truncate max-w-[120px]">
-                    <a 
-                      href={`/profile/${entry.username}`}
-                      className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        window.location.href = `/profile/${entry.username}`;
-                      }}
-                    >
-                      {entry.username}
-                    </a>
+                    <div className="flex items-center gap-1">
+                      <a 
+                        href={`/profile/${entry.username}`}
+                        className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer truncate"
+                        onClick={async (event) => {
+                          event.preventDefault();
+                          
+                          // Check if this is the current user's own profile
+                          const { data: { user } } = await supabase.auth.getUser();
+                          if (user) {
+                            const { data: profile } = await supabase
+                              .from('profiles')
+                              .select('username')
+                              .eq('id', user.id)
+                              .maybeSingle();
+                            
+                            if (profile && profile.username === entry.username) {
+                              // Navigate to own profile
+                              window.location.href = '/profile';
+                            } else {
+                              // Navigate to other user's profile
+                              window.location.href = `/profile/${entry.username}`;
+                            }
+                          } else {
+                            // Not logged in, navigate to other user's profile
+                            window.location.href = `/profile/${entry.username}`;
+                          }
+                        }}
+                      >
+                        {entry.username}
+                      </a>
+                      {entry.github_username && (
+                        <a
+                          href={`https://github.com/${entry.github_username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors flex-shrink-0"
+                          title={`github: ${entry.github_username}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Github size={12} />
+                        </a>
+                      )}
+                    </div>
                     {(() => {
                       const xpValue = entry.total_xp || (entry.total_attempts ? (entry.total_attempts * 5) * ((entry.wpm * (entry.accuracy || 100) / 100) / 50) : 150);
                       const level = getLevelFromXP(xpValue);

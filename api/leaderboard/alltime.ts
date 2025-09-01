@@ -6,7 +6,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const supabase = getServerClient(req);
     const { data, error } = await supabase
       .from('attempts')
-      .select('wpm, elapsed_ms, user_id, created_at, snippet_id, accuracy, profiles!inner(username, avatar_url)')
+      .select('wpm, elapsed_ms, user_id, created_at, snippet_id, accuracy, profiles!inner(username, avatar_url, github_id, github_username, github_avatar_url)')
       .order('wpm', { ascending: false })
       .order('elapsed_ms', { ascending: true })
       .limit(100);

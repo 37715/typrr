@@ -64,7 +64,7 @@ export default async function handler(req, res) {
     const userIds = Object.keys(userBestAttempts);
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, username, avatar_url')
+      .select('id, username, avatar_url, github_id, github_username, github_avatar_url')
       .in('id', userIds);
     
     if (profilesError) {
@@ -115,6 +115,9 @@ export default async function handler(req, res) {
           user_id: attempt.user_id,
           username: profile?.username || 'anonymous',
           avatar_url: profile?.avatar_url,
+          github_id: profile?.github_id,
+          github_username: profile?.github_username,
+          github_avatar_url: profile?.github_avatar_url,
           wpm: attempt.wpm,
           accuracy: attempt.accuracy,
           elapsed_ms: attempt.elapsed_ms,

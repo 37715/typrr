@@ -1,13 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { Play, Zap, Target, Trophy, Crown, Star, Gem } from 'lucide-react';
+import { Play, Zap, Target, Trophy, Crown, Star, Gem, Github } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 type Entry = {
   id: string;
   username: string;
   avatarUrl?: string;
+  githubUsername?: string;
   wpm: number;
+  accuracy?: number;
   timeMs: number;
   totalAttempts?: number;
   totalXp?: number;
@@ -112,16 +115,50 @@ export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [] 
                       <td className="py-3">
                         <div className="flex items-center gap-3">
                           <img src={e.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(e.username)}`} className="h-8 w-8 rounded-full" alt="avatar" />
-                          <a 
-                            href={`/profile/${e.username}`} 
-                            className="text-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
-                            onClick={(event) => {
-                              event.preventDefault();
-                              window.location.href = `/profile/${e.username}`;
-                            }}
-                          >
-                            {e.username}
-                          </a>
+                          <div className="flex items-center gap-1">
+                            <a 
+                              href={`/profile/${e.username}`} 
+                              className="text-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                              onClick={async (event) => {
+                                event.preventDefault();
+                                
+                                // Check if this is the current user's own profile
+                                const { data: { user } } = await supabase.auth.getUser();
+                                if (user) {
+                                  const { data: profile } = await supabase
+                                    .from('profiles')
+                                    .select('username')
+                                    .eq('id', user.id)
+                                    .maybeSingle();
+                                  
+                                  if (profile && profile.username === e.username) {
+                                    // Navigate to own profile
+                                    window.location.href = '/profile';
+                                  } else {
+                                    // Navigate to other user's profile
+                                    window.location.href = `/profile/${e.username}`;
+                                  }
+                                } else {
+                                  // Not logged in, navigate to other user's profile
+                                  window.location.href = `/profile/${e.username}`;
+                                }
+                              }}
+                            >
+                              {e.username}
+                            </a>
+                            {e.githubId && e.githubUsername && (
+                              <a
+                                href={`https://github.com/${e.githubUsername}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                                title={`github: ${e.githubUsername}`}
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <Github size={12} />
+                              </a>
+                            )}
+                          </div>
                           {(() => {
                             const xpValue = e.totalXp || (e.totalAttempts ? (e.totalAttempts * 5) * ((e.wpm * (e.accuracy || 100) / 100) / 50) : 150);
                             const level = getLevelFromXP(xpValue);

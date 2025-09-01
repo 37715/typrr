@@ -273,6 +273,27 @@ async function loadApiRoutes() {
       console.log('⚠️ Replays route not loaded (optional)');
     }
     
+    // Try to load GitHub OAuth routes
+    try {
+      const githubStartModule = await import('./api/auth/github-start.mjs');
+      app.post('/api/auth/github-start', (req, res) => {
+        githubStartModule.default(req, res);
+      });
+      console.log('✅ GitHub OAuth start route registered');
+    } catch (err) {
+      console.error('❌ Failed to load GitHub start route:', err.message);
+    }
+    
+    try {
+      const githubCallbackModule = await import('./api/auth/github-callback.mjs');
+      app.get('/api/auth/github-callback', (req, res) => {
+        githubCallbackModule.default(req, res);
+      });
+      console.log('✅ GitHub OAuth callback route registered');
+    } catch (err) {
+      console.error('❌ Failed to load GitHub callback route:', err.message);
+    }
+    
     console.log('✅ All API routes loaded successfully');
   } catch (err) {
     console.error('❌ Critical error loading API routes:', err);

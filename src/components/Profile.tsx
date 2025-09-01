@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Trophy, Zap, Target, Crown, Star, Gem, Camera, CheckCircle2, XCircle, UserPlus, UserMinus, Users, Edit2, Check, X } from 'lucide-react';
+import { Trophy, Zap, Target, Crown, Star, Gem, Camera, CheckCircle2, XCircle, UserPlus, UserMinus, Users, Edit2, Check, X, Github, ExternalLink } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 
 interface Profile {
@@ -10,6 +10,10 @@ interface Profile {
   avatar_url?: string;
   username_changes: number;
   last_username_change?: string;
+  github_id?: string;
+  github_username?: string;
+  github_avatar_url?: string;
+  github_connected_at?: string;
 }
 
 interface UserStats {
@@ -64,6 +68,9 @@ export const Profile: React.FC = () => {
   const [newUsername, setNewUsername] = useState('');
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const [isEditingUsername, setIsEditingUsername] = useState(false);
+  
+  // GitHub connection state
+  const [isConnectingGithub, setIsConnectingGithub] = useState(false);
   
   // Friend system state
   const [friendshipStatus, setFriendshipStatus] = useState<'none' | 'pending_sent' | 'pending_received' | 'friends' | 'blocked'>('none');
@@ -137,6 +144,143 @@ export const Profile: React.FC = () => {
       }
     } catch (error) {
       toast({ variant: 'error', title: 'failed to update username' });
+    }
+  };
+
+  const handleConnectGithub = async () => {
+    try {
+      setIsConnectingGithub(true);
+      
+      console.log('🔗 Getting current user session...');
+      
+      // Try multiple ways to get the current user
+      const { data: { session, user }, error: sessionError } = await supabase.auth.getSession();
+      const { data: { user: directUser }, error: userError } = await supabase.auth.getUser();
+      
+      console.log('👤 Session check result:', { 
+        session: !!session, 
+        sessionUser: !!user,
+        directUser: !!directUser, 
+        sessionError, 
+        userError,
+        profileExists: !!profile 
+      });
+      
+      // Use direct user if session user is not available
+      const currentUser = user || directUser;
+      
+      if (sessionError && userError) {
+        console.error('❌ Both session and user checks failed:', { sessionError, userError });
+        toast({ variant: 'error', title: 'authentication error - please sign in again' });
+        return;
+      }
+      
+      if (!currentUser) {
+        console.error('❌ No user found in session or direct check');
+        toast({ variant: 'error', title: 'please sign in first' });
+        return;
+      }
+      
+      // Try to get a fresh session token
+      let accessToken = session?.access_token;
+      if (!accessToken && directUser) {
+        // If we have a user but no session, try to refresh
+        const { data: refreshedSession } = await supabase.auth.refreshSession();
+        accessToken = refreshedSession.session?.access_token;
+        console.log('🔄 Refreshed session:', !!refreshedSession.session);
+      }
+      
+      if (!accessToken) {
+        console.error('❌ No access token available');
+        toast({ variant: 'error', title: 'session expired - please refresh the page' });
+        return;
+      }
+      
+      console.log('✅ Valid session found, starting GitHub OAuth flow...');
+      
+      // Call our server-side endpoint to initiate OAuth
+      const response = await fetch('/api/auth/github-start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          current_user_id: currentUser.id,
+          access_token: accessToken
+        })
+      });
+      
+      console.log('🔍 API response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API error response:', errorText);
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || 'failed to start oauth');
+        } catch {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+      }
+      
+      const result = await response.json();
+      console.log('✅ OAuth URL received:', result.oauth_url);
+      
+      // Redirect to GitHub OAuth - this will preserve your session
+      window.location.href = result.oauth_url;
+      
+    } catch (error) {
+      console.error('❌ GitHub connect error:', error);
+      toast({ variant: 'error', title: 'failed to start github connection: ' + error.message });
+      setIsConnectingGithub(false);
+    }
+  };
+
+  const handleDisconnectGithub = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      // Find the GitHub identity to unlink
+      const githubIdentity = user.identities?.find(identity => identity.provider === 'github');
+      
+      if (githubIdentity) {
+        // Unlink the GitHub identity
+        const { error: unlinkError } = await supabase.auth.unlinkIdentity(githubIdentity);
+        
+        if (unlinkError) {
+          console.error('Error unlinking GitHub identity:', unlinkError);
+          toast({ variant: 'error', title: 'failed to unlink github account: ' + unlinkError.message });
+          return;
+        }
+      }
+      
+      // Update profile to remove GitHub data
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          github_id: null, 
+          github_username: null, 
+          github_avatar_url: null,
+          github_connected_at: null 
+        })
+        .eq('id', user.id);
+      
+      if (!error) {
+        setProfile(prev => prev ? { 
+          ...prev, 
+          github_id: undefined,
+          github_username: undefined, 
+          github_avatar_url: undefined,
+          github_connected_at: undefined 
+        } : null);
+        toast({ variant: 'success', title: 'github account disconnected' });
+      } else {
+        toast({ variant: 'error', title: 'failed to update profile after disconnect' });
+      }
+    } catch (error) {
+      console.error('Error disconnecting GitHub:', error);
+      toast({ variant: 'error', title: 'failed to disconnect github account' });
     }
   };
 
@@ -444,6 +588,84 @@ export const Profile: React.FC = () => {
           if (profileData) {
             setProfile(profileData);
             setNewUsername(profileData.username);
+            
+            // Auto-connect GitHub if user signed up with GitHub OAuth and no github_id set
+            if (!profileData.github_id && user.app_metadata?.provider === 'github') {
+              const githubId = user.user_metadata?.provider_id;
+              const githubUsername = user.user_metadata?.user_name || user.user_metadata?.preferred_username;
+              const githubAvatarUrl = user.user_metadata?.avatar_url;
+              
+              if (githubId && githubUsername) {
+                // Auto-update the profile with GitHub OAuth data
+                const { error } = await supabase
+                  .from('profiles')
+                  .update({ 
+                    github_id: githubId,
+                    github_username: githubUsername,
+                    github_avatar_url: githubAvatarUrl,
+                    github_connected_at: new Date().toISOString()
+                  })
+                  .eq('id', user.id);
+                
+                if (!error) {
+                  setProfile(prev => prev ? { 
+                    ...prev, 
+                    github_id: githubId,
+                    github_username: githubUsername,
+                    github_avatar_url: githubAvatarUrl,
+                    github_connected_at: new Date().toISOString()
+                  } : null);
+                }
+              }
+            }
+            
+            // Check for GitHub OAuth results
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('github_connected') === 'success') {
+              console.log('✅ GitHub OAuth successful! Refreshing profile data...');
+              toast({ variant: 'success', title: 'github account connected successfully!' });
+              
+              // Refresh the page to show updated profile
+              setTimeout(() => {
+                window.location.href = '/profile';
+              }, 1000);
+              
+            } else if (urlParams.has('github_error')) {
+              const error = urlParams.get('github_error');
+              const existingUser = urlParams.get('existing_user');
+              
+              console.error('❌ GitHub OAuth failed:', error);
+              
+              let errorMessage = 'failed to connect github account';
+              switch (error) {
+                case 'already_linked':
+                  errorMessage = existingUser 
+                    ? `this github account is already linked to user: ${existingUser}` 
+                    : 'this github account is already linked to another user';
+                  break;
+                case 'access_denied':
+                  errorMessage = 'github authorization was cancelled';
+                  break;
+                case 'invalid_state':
+                case 'missing_parameters':
+                  errorMessage = 'invalid oauth request - please try again';
+                  break;
+                case 'token_exchange_failed':
+                case 'failed_to_fetch_user':
+                  errorMessage = 'failed to get github account info';
+                  break;
+                case 'update_failed':
+                  errorMessage = 'failed to save github connection';
+                  break;
+                default:
+                  errorMessage = `github connection error: ${error}`;
+              }
+              
+              toast({ variant: 'error', title: errorMessage });
+              
+              // Clean up URL
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
           }
           if (statsData) {
             setUserStats(statsData);
@@ -682,6 +904,55 @@ export const Profile: React.FC = () => {
                  'username already taken'}
               </div>
             )}
+            
+            {/* GitHub Connection */}
+            <div className="mb-4">
+              <div className="flex items-center gap-3 mb-2">
+                <Github size={18} className="text-zinc-600 dark:text-zinc-400" />
+                {displayProfile?.github_username ? (
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={`https://github.com/${displayProfile.github_username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors flex items-center gap-1"
+                    >
+                      {displayProfile.github_username}
+                      <ExternalLink size={12} />
+                    </a>
+                    {isOwnProfile && (
+                      <button
+                        onClick={handleDisconnectGithub}
+                        className="px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 border border-red-200 dark:border-red-800 rounded transition-colors"
+                        title="disconnect github account"
+                      >
+                        disconnect
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {isOwnProfile ? (
+                      <button
+                        onClick={handleConnectGithub}
+                        disabled={isConnectingGithub}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Github size={14} />
+                        {isConnectingGithub ? 'connecting...' : 'connect with github'}
+                      </button>
+                    ) : (
+                      <span className="text-sm text-zinc-500 dark:text-zinc-400">no github connected</span>
+                    )}
+                  </div>
+                )}
+              </div>
+              {displayProfile?.github_connected_at && isOwnProfile && (
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 ml-6">
+                  connected {new Date(displayProfile.github_connected_at).toLocaleDateString()}
+                </div>
+              )}
+            </div>
             
             {/* XP Progress - Only show progress details for own profile */}
             <div className="mb-4">

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GitHub OAuth</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <div style="text-align: center; padding: 50px; font-family: system-ui, -apple-system, sans-serif;">
+        <h2>Connecting GitHub...</h2>
+        <p>Please wait while we connect your GitHub account.</p>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+        
+        const supabase = createClient(
+            'https://oryoybnvfsqtkftymwwx.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9yeW95Ym52ZnNxdGtmdHltd3d4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMwMTU2MDQsImV4cCI6MjA0ODU5MTYwNH0.6fQYF-LHBKBDQTb_KZ1jPPOT4a2E6EeYykmSjJn7Y98'
+        )
+        
+        console.log('🪟 GitHub popup loaded');
+        
+        // Check if this is an OAuth callback
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
+        
+        if (error) {
+            console.error('❌ GitHub OAuth error:', error);
+            window.opener.postMessage({
+                type: 'github-oauth-error',
+                error: error
+            }, window.location.origin);
+            window.close();
+        } else if (code) {
+            console.log('✅ GitHub OAuth successful, processing...');
+            
+            // Get the session from Supabase (should be set after OAuth)
+            supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+                if (error || !session) {
+                    console.error('❌ No session after OAuth:', error);
+                    window.opener.postMessage({
+                        type: 'github-oauth-error',
+                        error: 'No session created'
+                    }, window.location.origin);
+                    window.close();
+                    return;
+                }
+                
+                console.log('👤 GitHub session created:', session.user.user_metadata);
+                
+                // Extract GitHub data
+                const githubData = {
+                    id: session.user.user_metadata.provider_id || session.user.user_metadata.sub,
+                    username: session.user.user_metadata.user_name || session.user.user_metadata.preferred_username,
+                    avatar_url: session.user.user_metadata.avatar_url
+                };
+                
+                // Get the original user ID from the state or URL params
+                const originalUserId = urlParams.get('original_user_id') || state;
+                
+                if (originalUserId && githubData.id && githubData.username) {
+                    try {
+                        // Update the original user's profile with GitHub data
+                        // Note: This would need to be done server-side with service role key
+                        // For now, just send the data back to the parent window
+                        
+                        window.opener.postMessage({
+                            type: 'github-oauth-success',
+                            github: githubData,
+                            original_user_id: originalUserId
+                        }, window.location.origin);
+                        
+                        window.close();
+                    } catch (err) {
+                        console.error('❌ Error processing GitHub data:', err);
+                        window.opener.postMessage({
+                            type: 'github-oauth-error',
+                            error: err.message
+                        }, window.location.origin);
+                        window.close();
+                    }
+                } else {
+                    console.error('❌ Missing GitHub or user data');
+                    window.opener.postMessage({
+                        type: 'github-oauth-error',
+                        error: 'Missing GitHub data'
+                    }, window.location.origin);
+                    window.close();
+                }
+            });
+        } else {
+            console.log('🔄 Waiting for OAuth callback...');
+        }
+    </script>
+</body>
+</html>
