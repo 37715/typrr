@@ -493,6 +493,17 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isComplete]);
 
+  // Handle auto-next for practice mode
+  useEffect(() => {
+    if (!isDailyMode && isComplete && autoNext) {
+      const timer = setTimeout(() => {
+        handleRefresh();
+      }, 350);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isComplete, autoNext, isDailyMode, handleRefresh]);
+
   const isLocked = isDailyMode && attemptsRemaining <= 0;
 
   return (
@@ -657,10 +668,6 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         </div>
       )}
 
-      {/* auto-next handler for practice */}
-      {!isDailyMode && isComplete && autoNext && (
-        <span className="sr-only" aria-hidden="true">{setTimeout(() => handleRefresh(), 350)}</span>
-      )}
     </div>
   );
 };
