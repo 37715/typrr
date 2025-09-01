@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { CodeTypingPanel } from './components/CodeTypingPanel';
@@ -24,9 +24,9 @@ function App() {
       .replace(/\r/g, '\n');  // Convert old Mac line endings to Unix
   };
 
-  const handleTypingStart = () => {};
+  const handleTypingStart = useCallback(() => {}, []);
 
-  const handleTypingComplete = () => {
+  const handleTypingComplete = useCallback(() => {
     // Refresh leaderboard when someone completes a challenge - but only once
     const isDailyMode = window.location.pathname.includes('daily');
     if (isDailyMode && !refreshTimeoutRef.current) {
@@ -36,19 +36,19 @@ function App() {
         refreshTimeoutRef.current = null;
       }, 2000); // Wait 2 seconds before refreshing leaderboard once
     }
-  };
+  }, []);
 
-  const handleReset = () => {};
+  const handleReset = useCallback(() => {}, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     // Trigger a reload by incrementing the refresh trigger
     setRefreshTrigger(prev => prev + 1);
-  };
+  }, []);
 
-  const handleLanguageChange = (language: string) => {
+  const handleLanguageChange = useCallback((language: string) => {
     setSelectedLanguage(language);
     // No need to manually trigger refresh - the useEffect will handle it when selectedLanguage changes
-  };
+  }, []);
 
   // Cleanup timeout on unmount
   useEffect(() => {
