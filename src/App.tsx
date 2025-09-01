@@ -104,12 +104,15 @@ function App() {
   }, [refreshTrigger, selectedLanguage]);
 
   if (isLoading) {
+    const isProfilePage = window.location.pathname.includes('/profile');
+    const loadingText = isProfilePage ? 'loading profile page...' : 'loading challenge...';
+    
     return (
       <div className="min-h-screen flex flex-col lowercase bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 transition-colors duration-300">
         <Header />
         <main className="flex-1 flex flex-col items-center justify-center px-4">
           <div className="text-center">
-            <div className="text-xl text-zinc-600 dark:text-zinc-400">loading challenge...</div>
+            <div className="text-xl text-zinc-600 dark:text-zinc-400">{loadingText}</div>
           </div>
         </main>
         <Footer />

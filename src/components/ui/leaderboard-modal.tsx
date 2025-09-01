@@ -38,11 +38,12 @@ const getLevelFromXP = (xp: number) => {
 
 type TabKey = 'daily' | 'alltime';
 
-export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [] }: {
+export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [], loading = false }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   daily?: Entry[];
   alltime?: Entry[];
+  loading?: boolean;
 }) {
   const [tab, setTab] = useState<TabKey>('daily');
 
@@ -104,12 +105,22 @@ export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [] 
                   </tr>
                 </thead>
                 <tbody>
-                  {data.length === 0 && (
+                  {loading && (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-zinc-500 dark:text-zinc-400">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border border-zinc-400 border-t-transparent rounded-full animate-spin"></div>
+                          loading leaderboard...
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {!loading && data.length === 0 && (
                     <tr>
                       <td colSpan={6} className="py-8 text-center text-zinc-500 dark:text-zinc-400">no entries yet</td>
                     </tr>
                   )}
-                  {data.map((e, i) => (
+                  {!loading && data.map((e, i) => (
                     <tr key={e.id} className="border-t border-zinc-200 dark:border-zinc-800">
                       <td className="py-3 text-sm tabular-nums">{i + 1}</td>
                       <td className="py-3">
