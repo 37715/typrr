@@ -156,7 +156,7 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
 
         const finalAccuracy = accuracy / 100;
         const attemptData = { 
-          snippet_id: null, // No snippet for tricky chars mode
+          snippet_id: '4785fbf4-d7a9-422a-8384-1d8ac804fd2d', // Placeholder snippet for tricky chars mode
           mode: 'tricky_chars',
           elapsed_ms: Math.round((performance.now() - startTimestampRef.current)), 
           wpm: Math.round(wpm), 
