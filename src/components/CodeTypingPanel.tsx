@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 interface CodeTypingPanelProps {
   snippet: string;
   snippetId: string | null;
+  language?: string;
   onComplete: () => void;
   onStart: () => void;
   onReset: () => void;
@@ -20,6 +21,7 @@ interface CodeTypingPanelProps {
 export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   snippet,
   snippetId,
+  language,
   onComplete,
   onStart,
   onReset,
@@ -55,7 +57,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   const [totalKeysPressed, setTotalKeysPressed] = useState(0);
   
   // Define isLocked early so it can be used in useEffect hooks
-  const isLocked = isDailyMode && isLoggedIn && !attemptsLoading && attemptsRemaining <= 0;
+  const isLocked = isDailyMode && isLoggedIn && (attemptsLoading || attemptsRemaining <= 0);
   
   const totalCharsTyped = userInput.length;
   const totalWordsTyped = useMemo(() => totalCharsTyped / 5, [totalCharsTyped]);
@@ -607,6 +609,13 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
 
             {/* Code Content */}
             <div className="flex-1 relative">
+              {/* Language indicator - subtle and positioned in top-right */}
+              {language && (
+                <div className="absolute top-3 right-4 text-xs font-mono text-zinc-400 dark:text-zinc-500 opacity-60 z-20 pointer-events-none lowercase">
+                  {language}
+                </div>
+              )}
+              
               {/* Instruction text when not started */}
               {!hasStarted && (
                 <div className="absolute top-2 left-8 text-sm text-zinc-500 dark:text-zinc-400 animate-pulse z-20 pointer-events-none">

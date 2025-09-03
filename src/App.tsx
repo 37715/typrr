@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { CodeTypingPanel } from './components/CodeTypingPanel';
 import { Top10 } from './components/Top10';
+import { PracticeTop10 } from './components/PracticeTop10';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Profile } from './components/Profile';
 import { TrickyChars } from './components/TrickyChars';
@@ -11,6 +12,7 @@ function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [snippetContent, setSnippetContent] = useState<string>('');
   const [snippetId, setSnippetId] = useState<string | null>(null);
+  const [snippetLanguage, setSnippetLanguage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
@@ -91,18 +93,21 @@ function App() {
           const normalizedContent = normalizeSnippetContent(data.snippet.content);
           setSnippetContent(normalizedContent);
           setSnippetId(data.snippet.id);
+          setSnippetLanguage(data.snippet.language);
         } else {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           setApiError(`API ${endpoint} failed: ${errorData.error}`);
           console.warn(`API ${endpoint} failed:`, errorData);
           setSnippetContent('');
           setSnippetId(null);
+          setSnippetLanguage('');
         }
       } catch (error) {
         console.error('Failed to load snippet:', error);
         setApiError('Failed to connect to API');
         setSnippetContent('');
         setSnippetId(null);
+        setSnippetLanguage('');
       } finally {
         setIsLoading(false);
       }
@@ -148,6 +153,7 @@ function App() {
                   <CodeTypingPanel
                     snippet={snippetContent}
                     snippetId={snippetId}
+                    language={snippetLanguage}
                     onComplete={handleTypingComplete}
                     onStart={handleTypingStart}
                     onReset={handleReset}
@@ -164,21 +170,39 @@ function App() {
             <Route path="/practice" element={
               <>
                 <div className="text-center text-zinc-700 dark:text-zinc-300 mb-2 sr-only">practice</div>
-                {apiError && (
-                  <div className="text-center text-amber-600 dark:text-amber-400 text-sm mb-4 p-2 bg-amber-50 dark:bg-amber-900/20 rounded border">
-                    {apiError}
+                
+                {/* Practice page layout with side leaderboard */}
+                <div className="relative">
+                  {/* Main content container - responsive width */}
+                  <div className="max-w-4xl mx-auto">
+                    {apiError && (
+                      <div className="text-center text-amber-600 dark:text-amber-400 text-sm mb-4 p-2 bg-amber-50 dark:bg-amber-900/20 rounded border">
+                        {apiError}
+                      </div>
+                    )}
+                    <CodeTypingPanel
+                      snippet={snippetContent}
+                      snippetId={snippetId}
+                      language={snippetLanguage}
+                      onComplete={handleTypingComplete}
+                      onStart={handleTypingStart}
+                      onReset={handleReset}
+                      onRefresh={handleRefresh}
+                      selectedLanguage={selectedLanguage}
+                      onLanguageChange={handleLanguageChange}
+                    />
                   </div>
-                )}
-                <CodeTypingPanel
-                  snippet={snippetContent}
-                  snippetId={snippetId}
-                  onComplete={handleTypingComplete}
-                  onStart={handleTypingStart}
-                  onReset={handleReset}
-                  onRefresh={handleRefresh}
-                  selectedLanguage={selectedLanguage}
-                  onLanguageChange={handleLanguageChange}
-                />
+
+                  {/* Practice Leaderboard - positioned to the right on larger screens */}
+                  <div className="hidden xl:block absolute right-4 top-0 w-80">
+                    <PracticeTop10 selectedLanguage={selectedLanguage} />
+                  </div>
+                </div>
+                
+                {/* Practice Leaderboard - shows below main content on smaller screens */}
+                <div className="xl:hidden mt-8 max-w-4xl mx-auto">
+                  <PracticeTop10 selectedLanguage={selectedLanguage} />
+                </div>
               </>
             } />
             <Route path="/tricky-chars" element={

@@ -11,11 +11,18 @@ export const Header: React.FC = () => {
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
   const [dailyData, setDailyData] = useState([]);
+  const [trickyData, setTrickyData] = useState([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const toast = useToast();
 
-  const fetchDailyLeaderboard = async () => {
+  const fetchLeaderboard = async () => {
+    setLoadingLeaderboard(true);
     try {
-      const response = await fetch('/api/leaderboard?mode=daily');
+      // Detect current page
+      const isTrickyChars = window.location.pathname.includes('tricky-chars');
+      const mode = isTrickyChars ? 'tricky-chars' : 'daily';
+      
+      const response = await fetch(`/api/leaderboard?mode=${mode}`);
       if (response.ok) {
         const data = await response.json();
         const formattedData = data.leaderboard?.map((entry: any) => {
@@ -30,16 +37,23 @@ export const Header: React.FC = () => {
             totalXp: entry.total_xp || 150
           };
         }) || [];
-        setDailyData(formattedData);
+        
+        if (isTrickyChars) {
+          setTrickyData(formattedData);
+        } else {
+          setDailyData(formattedData);
+        }
       }
     } catch (error) {
-      console.error('Failed to fetch daily leaderboard:', error);
+      console.error('Failed to fetch leaderboard:', error);
+    } finally {
+      setLoadingLeaderboard(false);
     }
   };
 
   const handleLeaderboardOpen = () => {
     setLbOpen(true);
-    fetchDailyLeaderboard();
+    fetchLeaderboard();
   };
 
   useEffect(() => {
@@ -126,7 +140,12 @@ export const Header: React.FC = () => {
               onLogin={() => setAuthOpen(false)}
               onSignup={() => setAuthOpen(false)}
             />
-            <LeaderboardModal open={lbOpen} onOpenChange={setLbOpen} daily={dailyData} />
+            <LeaderboardModal 
+              open={lbOpen} 
+              onOpenChange={setLbOpen} 
+              daily={window.location.pathname.includes('tricky-chars') ? trickyData : dailyData}
+              loading={loadingLeaderboard}
+            />
           </div>
         </div>
       </div>
