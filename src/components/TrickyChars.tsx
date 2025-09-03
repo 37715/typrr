@@ -154,13 +154,12 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
         
         if (!token) return;
 
-        const finalAccuracy = accuracy / 100;
         const attemptData = { 
           snippet_id: '4785fbf4-d7a9-422a-8384-1d8ac804fd2d', // Placeholder snippet for tricky chars mode
           mode: 'tricky_chars',
           elapsed_ms: Math.round((performance.now() - startTimestampRef.current)), 
           wpm: Math.round(wpm), 
-          accuracy: Math.round(finalAccuracy * 100) / 100 
+          accuracy: Math.round(accuracy * 100) / 100 // accuracy is already a percentage
         };
         
         console.log('Submitting tricky chars attempt:', attemptData);
@@ -175,7 +174,7 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
         console.log('Attempt response:', result);
         
         // Show XP gained - lower amount for tricky chars
-        const earnedXp = Math.round(Math.max(5, Math.min(10, Math.round(wpm * finalAccuracy * 0.2))));
+        const earnedXp = Math.round(Math.max(5, Math.min(10, Math.round(wpm * (accuracy / 100) * 0.2))));
         setXpGained(earnedXp);
         setShowXpMessage(true);
         

@@ -92,14 +92,36 @@ async function handleDailyLeaderboard(supabase, res) {
     .select('id, username, avatar_url')
     .in('id', userIds);
   
+  const { data: userStats, error: statsError } = await supabase
+    .from('user_stats')
+    .select('user_id, total_attempts, avg_wpm, avg_accuracy')
+    .in('user_id', userIds);
+  
   if (profilesError) {
     console.error('Error fetching profiles:', profilesError);
     return res.status(500).json({ error: 'failed to fetch user profiles' });
   }
   
+  if (statsError) {
+    console.error('Error fetching user stats:', statsError);
+  }
+  
+  // XP calculation function (matches Profile.tsx)
+  const calculateXp = (totalAttempts, avgWpm, avgAccuracy) => {
+    if (!totalAttempts) return 0;
+    const baseXpPerAttempt = 5;
+    const performanceMultiplier = avgWpm && avgAccuracy 
+      ? (avgWpm * (avgAccuracy / 100)) / 50
+      : 1;
+    return Math.round(totalAttempts * baseXpPerAttempt * Math.max(0.5, Math.min(3, performanceMultiplier)));
+  };
+  
   // Combine attempt data with profile data
   const leaderboard = bestAttempts.map(attempt => {
     const profile = profiles.find(p => p.id === attempt.user_id);
+    const stats = userStats?.find(s => s.user_id === attempt.user_id);
+    const totalXp = stats ? calculateXp(stats.total_attempts || 0, stats.avg_wpm || 0, stats.avg_accuracy || 0) : 150;
+    
     return {
       user_id: attempt.user_id,
       username: profile?.username || 'unknown user',
@@ -108,6 +130,7 @@ async function handleDailyLeaderboard(supabase, res) {
       accuracy: Math.round(attempt.accuracy),
       elapsed_ms: attempt.elapsed_ms,
       total_attempts: attempts.filter(a => a.user_id === attempt.user_id).length,
+      total_xp: totalXp,
       best_attempt_time: attempt.created_at
     };
   })
@@ -155,14 +178,36 @@ async function handleTrickyCharsLeaderboard(supabase, res) {
     .select('id, username, avatar_url')
     .in('id', userIds);
   
+  const { data: userStats, error: statsError } = await supabase
+    .from('user_stats')
+    .select('user_id, total_attempts, avg_wpm, avg_accuracy')
+    .in('user_id', userIds);
+  
   if (profilesError) {
     console.error('Error fetching profiles:', profilesError);
     return res.status(500).json({ error: 'failed to fetch user profiles' });
   }
   
+  if (statsError) {
+    console.error('Error fetching user stats:', statsError);
+  }
+  
+  // XP calculation function (matches Profile.tsx)
+  const calculateXp = (totalAttempts, avgWpm, avgAccuracy) => {
+    if (!totalAttempts) return 0;
+    const baseXpPerAttempt = 5;
+    const performanceMultiplier = avgWpm && avgAccuracy 
+      ? (avgWpm * (avgAccuracy / 100)) / 50
+      : 1;
+    return Math.round(totalAttempts * baseXpPerAttempt * Math.max(0.5, Math.min(3, performanceMultiplier)));
+  };
+  
   // Combine attempt data with profile data
   const leaderboard = bestAttempts.map(attempt => {
     const profile = profiles.find(p => p.id === attempt.user_id);
+    const stats = userStats?.find(s => s.user_id === attempt.user_id);
+    const totalXp = stats ? calculateXp(stats.total_attempts || 0, stats.avg_wpm || 0, stats.avg_accuracy || 0) : 150;
+    
     return {
       user_id: attempt.user_id,
       username: profile?.username || 'unknown user',
@@ -171,6 +216,7 @@ async function handleTrickyCharsLeaderboard(supabase, res) {
       accuracy: Math.round(attempt.accuracy),
       elapsed_ms: attempt.elapsed_ms,
       total_attempts: attempts.filter(a => a.user_id === attempt.user_id).length,
+      total_xp: totalXp,
       best_attempt_time: attempt.created_at
     };
   })

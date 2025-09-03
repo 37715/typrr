@@ -27,7 +27,7 @@ export const Header: React.FC = () => {
             accuracy: entry.accuracy,
             timeMs: entry.elapsed_ms,
             totalAttempts: entry.total_attempts,
-            totalXp: entry.total_xp || (entry.total_attempts ? (entry.total_attempts * 5) * ((entry.wpm * (entry.accuracy || 100) / 100) / 50) : 150)
+            totalXp: entry.total_xp || 150
           };
         }) || [];
         setDailyData(formattedData);
