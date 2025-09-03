@@ -114,7 +114,7 @@ async function handleDailyLeaderboard(supabase, res) {
   .sort((a, b) => b.wpm - a.wpm) // Sort by WPM descending
   .slice(0, 100); // Top 100
   
-  console.log(\`📊 Returning \${leaderboard.length} daily leaderboard entries\`);
+  console.log(`📊 Returning ${leaderboard.length} daily leaderboard entries`);
   return res.status(200).json({ leaderboard });
 }
 
@@ -177,6 +177,6 @@ async function handleTrickyCharsLeaderboard(supabase, res) {
   .sort((a, b) => b.wpm - a.wpm) // Sort by WPM descending
   .slice(0, 100); // Top 100
   
-  console.log(\`📊 Returning \${leaderboard.length} tricky chars leaderboard entries\`);
+  console.log(`📊 Returning ${leaderboard.length} tricky chars leaderboard entries`);
   return res.status(200).json({ leaderboard });
 }

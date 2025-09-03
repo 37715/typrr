@@ -252,15 +252,15 @@ async function loadApiRoutes() {
     });
     console.log('✅ Attempt route registered');
     
-    // Try to load optional leaderboard routes
+    // Load consolidated leaderboard route
     try {
-      const leaderboardDailyModule = await import('./api/leaderboard/daily.mjs');
-      app.get('/api/leaderboard/daily', (req, res) => {
-        leaderboardDailyModule.default(req, res);
+      const leaderboardModule = await import('./api/leaderboard.mjs');
+      app.get('/api/leaderboard', (req, res) => {
+        leaderboardModule.default(req, res);
       });
-      console.log('✅ Daily leaderboard route registered');
+      console.log('✅ Consolidated leaderboard route registered');
     } catch (err) {
-      console.error('❌ Failed to load daily leaderboard route:', err.message);
+      console.error('❌ Failed to load consolidated leaderboard route:', err.message);
     }
     
     try {
@@ -271,16 +271,6 @@ async function loadApiRoutes() {
       console.log('✅ All-time leaderboard route registered');
     } catch (err) {
       console.log('⚠️ All-time leaderboard route not loaded (optional)');
-    }
-    
-    try {
-      const trickyCharsLeaderboardModule = await import('./api/leaderboard/tricky-chars.mjs');
-      app.get('/api/leaderboard/tricky-chars', (req, res) => {
-        trickyCharsLeaderboardModule.default(req, res);
-      });
-      console.log('✅ Tricky chars leaderboard route registered');
-    } catch (err) {
-      console.error('❌ Failed to load tricky chars leaderboard route:', err.message);
     }
     
     // Try to load optional replays route
@@ -294,15 +284,18 @@ async function loadApiRoutes() {
       console.log('⚠️ Replays route not loaded (optional)');
     }
     
-    // Try to load GitHub OAuth routes
+    // Load consolidated GitHub OAuth routes
     try {
-      const githubStartModule = await import('./api/auth/github-start.mjs');
-      app.post('/api/auth/github-start', (req, res) => {
-        githubStartModule.default(req, res);
+      const githubModule = await import('./api/auth/github.mjs');
+      app.post('/api/auth/github', (req, res) => {
+        githubModule.default(req, res);
       });
-      console.log('✅ GitHub OAuth start route registered');
+      app.get('/api/auth/github', (req, res) => {
+        githubModule.default(req, res);
+      });
+      console.log('✅ Consolidated GitHub OAuth route registered');
     } catch (err) {
-      console.error('❌ Failed to load GitHub start route:', err.message);
+      console.error('❌ Failed to load consolidated GitHub route:', err.message);
     }
     
     try {
