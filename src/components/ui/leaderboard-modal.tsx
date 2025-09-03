@@ -38,12 +38,13 @@ const getLevelFromXP = (xp: number) => {
 
 type TabKey = 'daily' | 'alltime';
 
-export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [], loading = false }: {
+export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [], loading = false, mode = 'daily' }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   daily?: Entry[];
   alltime?: Entry[];
   loading?: boolean;
+  mode?: 'daily' | 'tricky-chars';
 }) {
   const [tab, setTab] = useState<TabKey>('daily');
 
@@ -70,20 +71,26 @@ export function LeaderboardModal({ open, onOpenChange, daily = [], alltime = [],
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">
-              <div className="flex gap-1 rounded-full bg-zinc-200 p-1 dark:bg-white/5">
-                <button
-                  className={`px-3 py-1.5 rounded-full text-sm transition ${tab === 'daily' ? 'bg-white text-zinc-900 dark:bg-white/90' : 'text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white'}`}
-                  onClick={() => setTab('daily')}
-                >
-                  daily challenge
-                </button>
-                <button
-                  className={`px-3 py-1.5 rounded-full text-sm transition ${tab === 'alltime' ? 'bg-white text-zinc-900 dark:bg-white/90' : 'text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white'}`}
-                  onClick={() => setTab('alltime')}
-                >
-                  hall of fame
-                </button>
-              </div>
+              {mode === 'daily' ? (
+                <div className="flex gap-1 rounded-full bg-zinc-200 p-1 dark:bg-white/5">
+                  <button
+                    className={`px-3 py-1.5 rounded-full text-sm transition ${tab === 'daily' ? 'bg-white text-zinc-900 dark:bg-white/90' : 'text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white'}`}
+                    onClick={() => setTab('daily')}
+                  >
+                    daily challenge
+                  </button>
+                  <button
+                    className={`px-3 py-1.5 rounded-full text-sm transition ${tab === 'alltime' ? 'bg-white text-zinc-900 dark:bg-white/90' : 'text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white'}`}
+                    onClick={() => setTab('alltime')}
+                  >
+                    hall of fame
+                  </button>
+                </div>
+              ) : (
+                <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  tricky chars all-time
+                </div>
+              )}
               <button
                 className="rounded-lg px-3 py-1.5 text-sm border border-zinc-200 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-white/10"
                 onClick={() => onOpenChange(false)}

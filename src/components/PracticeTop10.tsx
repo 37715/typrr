@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, ChevronDown } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 
 type TimePeriod = 'today' | 'week' | 'alltime';
 
@@ -10,7 +10,6 @@ interface PracticeTop10Props {
 
 export const PracticeTop10: React.FC<PracticeTop10Props> = ({ className = '', selectedLanguage = 'all' }) => {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('alltime');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const periods = [
     { key: 'today' as const, label: 'today' },
@@ -18,48 +17,31 @@ export const PracticeTop10: React.FC<PracticeTop10Props> = ({ className = '', se
     { key: 'alltime' as const, label: 'all time' }
   ];
 
-  const currentPeriod = periods.find(p => p.key === timePeriod)?.label || 'all time';
-
   return (
     <div className={`bg-white/90 dark:bg-zinc-900/60 backdrop-blur-sm rounded-2xl border border-zinc-300 dark:border-zinc-800 p-4 shadow-lg w-full ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
+      <div className="mb-4">
+        <div className="flex items-center gap-3 mb-3">
           <Trophy size={20} className="text-blue-500" />
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
-            top 10 practice
+            snippet leaderboard
           </h2>
         </div>
         
-        {/* Time period selector */}
-        <div className="relative">
-          <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-1 px-2 py-1 text-xs border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-          >
-            {currentPeriod}
-            <ChevronDown size={12} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
-          
-          {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-1 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg shadow-lg z-10 min-w-[100px]">
-              {periods.map((period) => (
-                <button
-                  key={period.key}
-                  onClick={() => {
-                    setTimePeriod(period.key);
-                    setDropdownOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                    timePeriod === period.key 
-                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
-                      : 'text-zinc-700 dark:text-zinc-300'
-                  }`}
-                >
-                  {period.label}
-                </button>
-              ))}
-            </div>
-          )}
+        {/* Horizontal tab selector */}
+        <div className="flex gap-1">
+          {periods.map((period) => (
+            <button
+              key={period.key}
+              onClick={() => setTimePeriod(period.key)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                timePeriod === period.key 
+                  ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200 dark:bg-white dark:text-zinc-900' 
+                  : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+            >
+              {period.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -78,18 +60,10 @@ export const PracticeTop10: React.FC<PracticeTop10Props> = ({ className = '', se
         </p>
         {selectedLanguage !== 'all' && (
           <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-            {selectedLanguage} • {currentPeriod}
+            {selectedLanguage} • {periods.find(p => p.key === timePeriod)?.label}
           </p>
         )}
       </div>
-
-      {/* Close dropdown when clicking outside */}
-      {dropdownOpen && (
-        <div 
-          className="fixed inset-0 z-0" 
-          onClick={() => setDropdownOpen(false)}
-        />
-      )}
     </div>
   );
 };

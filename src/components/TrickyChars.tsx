@@ -393,6 +393,7 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
         onOpenChange={setLbOpen} 
         daily={trickyData} 
         loading={leaderboardLoading}
+        mode="tricky-chars"
       />
       <GlassAuthModal
         open={authOpen}
