@@ -45,6 +45,8 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   const [attemptRecorded, setAttemptRecorded] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
   const [dailyData, setDailyData] = useState([]);
+  const [trickyData, setTrickyData] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [autoNext, setAutoNext] = useState<boolean>(() => {
     try {
@@ -247,9 +249,14 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     setAttemptsRemaining(prev => Math.max(0, prev - 1));
   }, [isComplete, attemptRecorded, isDailyMode]);
 
-  const fetchDailyLeaderboard = async () => {
+  const fetchLeaderboard = async () => {
+    setLeaderboardLoading(true);
     try {
-      const response = await fetch('/api/leaderboard?mode=daily');
+      // Detect current page mode
+      const isTrickyChars = window.location.pathname.includes('tricky-chars');
+      const mode = isTrickyChars ? 'tricky-chars' : 'daily';
+      
+      const response = await fetch(`/api/leaderboard?mode=${mode}`);
       if (response.ok) {
         const data = await response.json();
         const formattedData = data.leaderboard?.map((entry: any) => ({
@@ -262,16 +269,23 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
           totalAttempts: entry.total_attempts,
           totalXp: entry.total_xp || 150
         })) || [];
-        setDailyData(formattedData);
+        
+        if (isTrickyChars) {
+          setTrickyData(formattedData);
+        } else {
+          setDailyData(formattedData);
+        }
       }
     } catch (error) {
-      console.error('Failed to fetch daily leaderboard:', error);
+      console.error('Failed to fetch leaderboard:', error);
+    } finally {
+      setLeaderboardLoading(false);
     }
   };
 
   const handleLeaderboardOpen = () => {
     setLbOpen(true);
-    fetchDailyLeaderboard();
+    fetchLeaderboard();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -710,7 +724,12 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         )}
       </div>
 
-      <LeaderboardModal open={lbOpen} onOpenChange={setLbOpen} daily={dailyData} />
+      <LeaderboardModal 
+        open={lbOpen} 
+        onOpenChange={setLbOpen} 
+        daily={window.location.pathname.includes('tricky-chars') ? trickyData : dailyData}
+        loading={leaderboardLoading}
+      />
 
       {isLocked && (
         <div className="mt-6 text-center">

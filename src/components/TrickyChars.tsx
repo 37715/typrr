@@ -48,6 +48,7 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
   const [showXpMessage, setShowXpMessage] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
   const [trickyData, setTrickyData] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -206,6 +207,7 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
   };
 
   const fetchTrickyLeaderboard = async () => {
+    setLeaderboardLoading(true);
     try {
       const response = await fetch('/api/leaderboard?mode=tricky-chars');
       if (response.ok) {
@@ -224,6 +226,8 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
       }
     } catch (error) {
       console.error('Failed to fetch tricky chars leaderboard:', error);
+    } finally {
+      setLeaderboardLoading(false);
     }
   };
 
@@ -384,7 +388,12 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
         </div>
       )}
 
-      <LeaderboardModal open={lbOpen} onOpenChange={setLbOpen} daily={trickyData} />
+      <LeaderboardModal 
+        open={lbOpen} 
+        onOpenChange={setLbOpen} 
+        daily={trickyData} 
+        loading={leaderboardLoading}
+      />
       <GlassAuthModal
         open={authOpen}
         onOpenChange={setAuthOpen}
