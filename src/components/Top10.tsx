@@ -57,7 +57,7 @@ export const Top10: React.FC<Top10Props> = ({ className = '', refreshTrigger }) 
         setLoading(true);
       }
       
-      const response = await fetch('/api/leaderboard/daily', {
+      const response = await fetch('/api/leaderboard?mode=daily', {
         headers: {
           'Cache-Control': 'no-cache',
         },

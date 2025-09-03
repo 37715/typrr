@@ -208,7 +208,7 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
 
   const fetchTrickyLeaderboard = async () => {
     try {
-      const response = await fetch('/api/leaderboard/tricky-chars');
+      const response = await fetch('/api/leaderboard?mode=tricky-chars');
       if (response.ok) {
         const data = await response.json();
         const formattedData = data.leaderboard?.map((entry: any) => ({

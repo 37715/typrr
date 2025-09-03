@@ -199,7 +199,7 @@ export const Profile: React.FC = () => {
       console.log('✅ Valid session found, starting GitHub OAuth flow...');
       
       // Call our server-side endpoint to initiate OAuth
-      const response = await fetch('/api/auth/github-start', {
+      const response = await fetch('/api/auth/github?action=start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -247,7 +247,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
 
   const fetchDailyLeaderboard = async () => {
     try {
-      const response = await fetch('/api/leaderboard/daily');
+      const response = await fetch('/api/leaderboard?mode=daily');
       if (response.ok) {
         const data = await response.json();
         const formattedData = data.leaderboard?.map((entry: any) => ({
