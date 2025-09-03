@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import { GetStartedButton } from '@/components/ui/get-started-button';
 import { LeaderboardModal } from '@/components/ui/leaderboard-modal';
 import { LanguageFilterDropdown } from '@/components/ui/language-filter-dropdown';
+import GlassAuthModal from '@/components/ui/auth-model';
 import { supabase } from '@/lib/supabase';
 
 interface CodeTypingPanelProps {
@@ -37,15 +38,12 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
 
   const snippetLines = snippet.split('\n');
   const isDailyMode = typeof window !== 'undefined' && !window.location.pathname.includes('practice');
-  const todayKey = useMemo(() => {
-    const d = new Date();
-    const iso = d.toISOString().slice(0, 10);
-    return `typrr_daily_attempts_${iso}`;
-  }, []);
   const [attemptsRemaining, setAttemptsRemaining] = useState<number>(3);
+  const [attemptsLoading, setAttemptsLoading] = useState(true);
   const [attemptRecorded, setAttemptRecorded] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
   const [dailyData, setDailyData] = useState([]);
+  const [authOpen, setAuthOpen] = useState(false);
   const [autoNext, setAutoNext] = useState<boolean>(() => {
     try {
       return localStorage.getItem('typrr_auto_next') === '1';
@@ -56,12 +54,16 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   const [totalMistakes, setTotalMistakes] = useState(0);
   const [totalKeysPressed, setTotalKeysPressed] = useState(0);
   
+  // Define isLocked early so it can be used in useEffect hooks
+  const isLocked = isDailyMode && isLoggedIn && !attemptsLoading && attemptsRemaining <= 0;
+  
   const totalCharsTyped = userInput.length;
   const totalWordsTyped = useMemo(() => totalCharsTyped / 5, [totalCharsTyped]);
   const wpm = useMemo(() => {
     if (!hasStarted || startTimestampRef.current === 0) return 0;
     const elapsedMinutes = (performance.now() - startTimestampRef.current) / 60000;
-    if (elapsedMinutes <= 0) return 0;
+    // Prevent extremely high WPM from tiny elapsed times
+    if (elapsedMinutes < 0.01) return 0; // Wait at least 0.6 seconds before calculating
     return totalWordsTyped / elapsedMinutes;
   }, [totalWordsTyped, hasStarted]);
 
@@ -104,13 +106,30 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snippet]);
 
-  // Auto-focus on component mount
+  // Auto-focus on component mount and maintain focus
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-      setIsFocused(true);
-    }
+    // Auto-focus after a brief delay to ensure component is mounted
+    setTimeout(() => {
+      if (textareaRef.current && !isComplete) {
+        textareaRef.current.focus();
+        setIsFocused(true);
+      }
+    }, 100);
   }, []);
+
+  // Maintain focus when component updates
+  useEffect(() => {
+    if (!isComplete && !isLocked) {
+      textareaRef.current?.focus();
+    }
+  }, [snippet, isComplete, isLocked]);
+
+  // Re-focus when clicking anywhere on the typing area
+  const handleContainerClick = () => {
+    if (!isComplete && !isLocked) {
+      textareaRef.current?.focus();
+    }
+  };
 
   // Handle input changes and track keystrokes
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -165,31 +184,66 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Initialize attempts from localStorage for daily mode
+  // Load attempts remaining from server for daily mode
   useEffect(() => {
-    if (!isDailyMode) return;
-    const raw = localStorage.getItem(todayKey);
-    const val = raw ? parseInt(raw, 10) : 3;
-    if (Number.isNaN(val)) {
-      setAttemptsRemaining(3);
-      localStorage.setItem(todayKey, '3');
-    } else {
-      setAttemptsRemaining(val);
+    if (!isDailyMode) {
+      setAttemptsLoading(false);
+      return;
     }
-  }, [isDailyMode, todayKey]);
+    
+    if (!isLoggedIn) {
+      setAttemptsRemaining(3); // default for logged out users
+      setAttemptsLoading(false);
+      return;
+    }
 
-  // When a daily attempt completes once, decrement
+    const fetchAttemptsRemaining = async () => {
+      setAttemptsLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          setAttemptsRemaining(3);
+          setAttemptsLoading(false);
+          return;
+        }
+
+        const response = await fetch('/api/daily-attempts-remaining', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setAttemptsRemaining(data.attempts_remaining);
+        } else {
+          console.error('Failed to fetch attempts remaining');
+          setAttemptsRemaining(3); // fallback
+        }
+      } catch (error) {
+        console.error('Error fetching attempts remaining:', error);
+        setAttemptsRemaining(3); // fallback
+      } finally {
+        setAttemptsLoading(false);
+      }
+    };
+
+    fetchAttemptsRemaining();
+  }, [isDailyMode, isLoggedIn]);
+
+  // Reset attempt recorded state when snippet changes
+  useEffect(() => {
+    setAttemptRecorded(false);
+  }, [snippet]);
+
+  // When a daily attempt completes, decrement locally (server will be updated when attempt is submitted)
   useEffect(() => {
     if (!isDailyMode) return;
     if (!isComplete) return;
     if (attemptRecorded) return;
     setAttemptRecorded(true);
-    setAttemptsRemaining(prev => {
-      const next = Math.max(0, prev - 1);
-      localStorage.setItem(todayKey, String(next));
-      return next;
-    });
-  }, [isComplete, attemptRecorded, isDailyMode, todayKey]);
+    setAttemptsRemaining(prev => Math.max(0, prev - 1));
+  }, [isComplete, attemptRecorded, isDailyMode]);
 
   const fetchDailyLeaderboard = async () => {
     try {
@@ -426,6 +480,10 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
 
   const handleRefresh = () => {
     onRefresh();
+    // Focus after refresh
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 10);
   };
 
   // Calculate XP gained for this attempt
@@ -504,8 +562,6 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     }
   }, [isComplete, autoNext, isDailyMode, handleRefresh]);
 
-  const isLocked = isDailyMode && attemptsRemaining <= 0;
-
   return (
     <div className="w-full max-w-4xl mx-auto lowercase relative">
       {isDailyMode && (
@@ -514,7 +570,9 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
       {isDailyMode && (
         <div className="pointer-events-none absolute -inset-x-8 -inset-y-6 rounded-[2rem] bg-gradient-to-r from-blue-500/15 via-purple-500/15 to-blue-500/15 blur-3xl" />
       )}
-      <div className="bg-zinc-50 dark:bg-zinc-900/90 backdrop-blur-sm rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden transition-colors duration-300 relative">
+      <div className={`bg-zinc-50 dark:bg-zinc-900/90 backdrop-blur-sm rounded-xl border shadow-2xl overflow-hidden transition-all duration-300 relative cursor-text ${
+        isFocused ? 'border-blue-400 dark:border-blue-500 shadow-blue-500/20' : 'border-zinc-200 dark:border-zinc-800'
+      }`} onClick={handleContainerClick}>
         {/* centered WPM and Accuracy header with mode badge */}
         <div className="relative flex items-center justify-center px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-950/60 transition-colors duration-300">
           <div className="flex items-center gap-8">
@@ -526,7 +584,13 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
             </div>
           </div>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300">
-            <span className="lowercase">{isDailyMode ? `${attemptsRemaining} attempts left` : 'practice'}</span>
+            <span className="lowercase">
+              {isDailyMode ? (
+                !isLoggedIn ? 'sign in to track attempts' : (
+                  attemptsLoading ? 'loading...' : `${attemptsRemaining} attempts left`
+                )
+              ) : 'practice'}
+            </span>
           </div>
         </div>
         {/* Code Panel */}
@@ -543,6 +607,12 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
 
             {/* Code Content */}
             <div className="flex-1 relative">
+              {/* Instruction text when not started */}
+              {!hasStarted && (
+                <div className="absolute top-2 left-8 text-sm text-zinc-500 dark:text-zinc-400 animate-pulse z-20 pointer-events-none">
+                  start typing to begin the challenge
+                </div>
+              )}
               {/* Visual overlay rendered behind the textarea so the caret remains visible */}
               <div className="absolute inset-0 p-8 font-mono no-liga text-lg leading-7 pointer-events-none z-0 whitespace-pre-wrap normal-case">
                 {snippet.split('').map((char, index) => renderCharacter(char, index))}
@@ -641,8 +711,24 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         </div>
       )}
 
+      {/* Login prompt for non-logged users on daily challenge - positioned above challenge complete */}
+      {isComplete && !isLocked && isDailyMode && !isLoggedIn && (
+        <div className="mt-6 text-center">
+          <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg border lowercase bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/20">
+            <span className="text-sm">
+              <button 
+                onClick={() => setAuthOpen(true)}
+                className="underline hover:no-underline cursor-pointer"
+              >
+                sign in
+              </button> to compete on the leaderboard
+            </span>
+          </div>
+        </div>
+      )}
+
       {isComplete && !isLocked && (
-        <div className="mt-6 text-center space-y-3">
+        <div className="mt-3 text-center space-y-3">
           {/* Main completion message */}
           <div className="inline-flex items-center space-x-2 px-5 py-3 rounded-lg border lowercase bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-green-500/20 dark:text-green-300 dark:border-green-500/30">
             <span className="text-base font-medium">challenge complete</span>
@@ -656,18 +742,15 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
               </div>
             </div>
           )}
-          
-          {/* Login prompt for non-logged users on daily challenge */}
-          {isDailyMode && !isLoggedIn && (
-            <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg border lowercase bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/20">
-              <span className="text-sm">
-                <a href="/profile" className="underline hover:no-underline">sign in</a> to compete on the leaderboard
-              </span>
-            </div>
-          )}
         </div>
       )}
 
+      <GlassAuthModal
+        open={authOpen}
+        onOpenChange={setAuthOpen}
+        onLogin={() => setAuthOpen(false)}
+        onSignup={() => setAuthOpen(false)}
+      />
     </div>
   );
 };

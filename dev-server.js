@@ -118,6 +118,17 @@ async function loadApiRoutes() {
     app.delete('/api/delete-user', handleDeleteUser);
     console.log('✅ Delete user route registered');
     
+    // Add daily attempts remaining route
+    try {
+      const attemptsModule = await import('./api/daily-attempts-remaining.mjs');
+      app.get('/api/daily-attempts-remaining', (req, res) => {
+        attemptsModule.default(req, res);
+      });
+      console.log('✅ Daily attempts remaining route registered');
+    } catch (err) {
+      console.error('❌ Failed to load daily attempts remaining route:', err.message);
+    }
+    
     try {
       // Import the daily challenge handler
       const dailyModule = await import('./api/daily.js');
@@ -185,7 +196,7 @@ async function loadApiRoutes() {
         console.log('Authenticated user:', user.id);
 
         const { snippet_id, mode, elapsed_ms, wpm, accuracy } = req.body || {};
-        if (!snippet_id || !mode || elapsed_ms == null || wpm == null || accuracy == null) {
+        if ((snippet_id == null && mode !== 'tricky_chars') || !mode || elapsed_ms == null || wpm == null || accuracy == null) {
           return res.status(400).json({ error: 'missing fields' });
         }
 
@@ -260,6 +271,16 @@ async function loadApiRoutes() {
       console.log('✅ All-time leaderboard route registered');
     } catch (err) {
       console.log('⚠️ All-time leaderboard route not loaded (optional)');
+    }
+    
+    try {
+      const trickyCharsLeaderboardModule = await import('./api/leaderboard/tricky-chars.mjs');
+      app.get('/api/leaderboard/tricky-chars', (req, res) => {
+        trickyCharsLeaderboardModule.default(req, res);
+      });
+      console.log('✅ Tricky chars leaderboard route registered');
+    } catch (err) {
+      console.error('❌ Failed to load tricky chars leaderboard route:', err.message);
     }
     
     // Try to load optional replays route

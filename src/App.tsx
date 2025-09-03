@@ -5,6 +5,7 @@ import { CodeTypingPanel } from './components/CodeTypingPanel';
 import { Top10 } from './components/Top10';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Profile } from './components/Profile';
+import { TrickyChars } from './components/TrickyChars';
 
 function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -65,6 +66,13 @@ function App() {
         setIsLoading(true);
         setApiError(null);
         const isPractice = window.location.pathname.includes('practice');
+        const isTrickyChars = window.location.pathname.includes('tricky-chars');
+        
+        // Skip loading snippets for tricky chars mode
+        if (isTrickyChars) {
+          setIsLoading(false);
+          return;
+        }
         
         let endpoint = isPractice ? '/api/practice/random' : '/api/daily';
         
@@ -172,6 +180,14 @@ function App() {
                   onLanguageChange={handleLanguageChange}
                 />
               </>
+            } />
+            <Route path="/tricky-chars" element={
+              <TrickyChars
+                onComplete={handleTypingComplete}
+                onStart={handleTypingStart}
+                onReset={handleReset}
+                onRefresh={handleRefresh}
+              />
             } />
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/:username" element={<Profile />} />

@@ -304,17 +304,96 @@ const levels = [
 - CORS configured for frontend domain
 - Express server handles attempt processing
 
+## CRITICAL ERROR PATTERNS & SOLUTIONS
+
+### Server-Side Attempts Tracking
+**Problem**: Daily challenge attempts were tracked in localStorage, causing account switching issues.
+**Solution**: Created `/api/daily-attempts-remaining` endpoint for server-side tracking per user.
+- **Key Learning**: User-specific data should NEVER be stored in localStorage - always use server-side APIs with authentication.
+- **Implementation**: Each user gets their own 3-attempt limit per day via database queries.
+
+### API Validation for Special Modes
+**Problem**: New game modes (like tricky chars) failed with "missing fields" errors.
+**Solution**: Modified validation to handle `snippet_id: null` for special modes:
+```javascript
+// WRONG: Blocks all null snippet_ids
+if (!snippet_id || !mode || elapsed_ms == null || wpm == null || accuracy == null)
+
+// CORRECT: Allow null for special modes
+if ((snippet_id == null && mode !== 'tricky_chars') || !mode || elapsed_ms == null || wpm == null || accuracy == null)
+```
+
+### Infinite API Call Loops  
+**Problem**: Callback functions recreated on every render caused infinite useEffect loops.
+**Solution**: Wrap ALL callback functions passed to child components in `useCallback`:
+```javascript
+// WRONG: Creates new function each render
+const handleComplete = () => { /* ... */ };
+
+// CORRECT: Memoized function
+const handleComplete = useCallback(() => { /* ... */ }, []);
+```
+**Critical**: Any function passed as a prop or used in useEffect dependencies MUST be wrapped in useCallback.
+
+### React Component Key vs Props
+**Problem**: Using `key={refreshTrigger}` caused components to remount and flash loading states.
+**Solution**: Use props instead of keys for data updates:
+```javascript
+// WRONG: Component remounts
+<Component key={refreshTrigger} />
+
+// CORRECT: Component updates data smoothly  
+<Component refreshTrigger={refreshTrigger} />
+```
+
+### Focus Management for Custom Input Components
+**Problem**: "click anywhere to start typing" logic was confusing and broke focus.
+**Solution**: Use transparent textarea overlays with proper attributes:
+```javascript
+className="absolute inset-0 w-full h-full bg-transparent border-none outline-none resize-none text-transparent"
+style={{ caretColor: 'transparent' }}
+spellCheck={false}
+autoComplete="off" 
+autoCorrect="off"
+autoCapitalize="off"
+```
+
+### Database Constraints for New Game Modes
+**Issue**: Foreign key constraints prevent using fake `snippet_id` values.
+**Solution**: Use `snippet_id: null` for special modes and update queries accordingly:
+```sql
+-- Filter for special modes
+WHERE mode = 'tricky_chars' AND snippet_id IS NULL
+```
+
+## Tricky Chars Game Mode
+**New game mode for practicing special characters**: `*}45':$%)-+=` etc.
+- **Route**: `/tricky-chars`
+- **Database**: Uses existing `attempts` table with `mode: 'tricky_chars'` and `snippet_id: null`
+- **API**: `/api/leaderboard/tricky-chars` for dedicated leaderboard
+- **UI**: Single-line, large font (4xl), real-time color coding
+- **XP**: Lower rewards (5-10 XP) vs regular challenges
+
+## Server-Side Daily Attempts
+**IMPORTANT**: Daily challenge attempts are now tracked server-side per user:
+- **API**: `GET /api/daily-attempts-remaining` with Authorization header
+- **Returns**: `{ attempts_remaining, attempts_used, max_attempts }`
+- **Integration**: CodeTypingPanel fetches on mount and shows user-specific counts
+
 ## Testing Checklist
 When making changes, always verify:
 - [ ] Sign up flow creates profile automatically
 - [ ] Username editing shows real-time validation
 - [ ] Both practice and daily challenge submit correctly  
+- [ ] Tricky chars mode saves attempts and shows on leaderboard
+- [ ] Daily attempts are user-specific (test account switching)
 - [ ] Profile page loads without 406 errors
 - [ ] Stats calculate and display properly
 - [ ] Avatar upload works (5MB limit)
 - [ ] All text is lowercase throughout UI
 - [ ] Dark mode works correctly
 - [ ] Username change limits enforced (2/month)
+- [ ] API server restart required for new routes
 
 ## Quick Reference Commands
 ```bash

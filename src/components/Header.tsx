@@ -88,12 +88,15 @@ export const Header: React.FC = () => {
           </div>
           
           {/* top navigation tabs */}
-          <nav className="hidden md:flex items-center justify-center space-x-2">
-            <a href="/daily" className="px-3 py-2 rounded-lg text-zinc-700 dark:text-zinc-300 transition-colors duration-200 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-zinc-900">
+          <nav className="hidden md:flex items-center justify-center space-x-1">
+            <a href="/daily" className="px-4 py-2 rounded-lg text-sm text-zinc-700 dark:text-zinc-300 transition-colors duration-200 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-zinc-900 whitespace-nowrap">
               daily challenge
             </a>
-            <a href="/practice" className="px-3 py-2 rounded-lg text-zinc-700 dark:text-zinc-300 transition-colors duration-200 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-zinc-900">
+            <a href="/practice" className="px-4 py-2 rounded-lg text-sm text-zinc-700 dark:text-zinc-300 transition-colors duration-200 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-zinc-900 whitespace-nowrap">
               practice
+            </a>
+            <a href="/tricky-chars" className="px-4 py-2 rounded-lg text-sm text-zinc-700 dark:text-zinc-300 transition-colors duration-200 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-zinc-900 whitespace-nowrap">
+              tricky chars
             </a>
           </nav>
 
