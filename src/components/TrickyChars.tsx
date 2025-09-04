@@ -46,6 +46,10 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [xpGained, setXpGained] = useState<number | null>(null);
   const [showXpMessage, setShowXpMessage] = useState(false);
+  
+  // 🛡️ SECURITY: Anti-cheat tracking
+  const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
+  const [keystrokeCount, setKeystrokeCount] = useState<number>(0);
   const [lbOpen, setLbOpen] = useState(false);
   const [trickyData, setTrickyData] = useState([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
@@ -155,12 +159,16 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
         
         if (!token) return;
 
+        // 🛡️ SECURITY: Include anti-cheat data for tricky chars
         const attemptData = { 
-          snippet_id: '4785fbf4-d7a9-422a-8384-1d8ac804fd2d', // Placeholder snippet for tricky chars mode
+          snippet_id: null, // No snippet for tricky chars
           mode: 'tricky_chars',
           elapsed_ms: Math.round((performance.now() - startTimestampRef.current)), 
           wpm: Math.round(wpm), 
-          accuracy: Math.round(accuracy * 100) / 100 // accuracy is already a percentage
+          accuracy: Math.round(accuracy * 100) / 100,
+          keystrokes: keystrokeCount,
+          start_time: sessionStartTime,
+          client_hash: btoa(navigator.userAgent + sessionStartTime + keystrokeCount)
         };
         
         console.log('Submitting tricky chars attempt:', attemptData);

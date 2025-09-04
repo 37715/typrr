@@ -36,6 +36,11 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [xpGained, setXpGained] = useState<number | null>(null);
   const [showXpMessage, setShowXpMessage] = useState(false);
+  
+  // 🛡️ SECURITY: Anti-cheat tracking
+  const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
+  const [keystrokeCount, setKeystrokeCount] = useState<number>(0);
+  const [focusEvents, setFocusEvents] = useState<{blur: number, focus: number}>({blur: 0, focus: 0});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const snippetLines = snippet.split('\n');
@@ -239,6 +244,11 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   useEffect(() => {
     setAttemptRecorded(false);
     
+    // 🛡️ SECURITY: Reset anti-cheat counters for new attempt
+    setSessionStartTime(Date.now());
+    setKeystrokeCount(0);
+    setFocusEvents({blur: 0, focus: 0});
+    
     // Also refresh attempts remaining for daily mode
     if (isDailyMode && isLoggedIn) {
       const fetchAttemptsRemaining = async () => {
@@ -315,6 +325,8 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // 🛡️ SECURITY: Track keystroke count for anti-cheat
+    setKeystrokeCount(prev => prev + 1);
     // Preserve typing within snippet length and support Tab indentation
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -557,12 +569,17 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
           return;
         }
 
+        // 🛡️ SECURITY: Include anti-cheat data in submission
         const attemptData = { 
           snippet_id: snippetId, 
           mode, 
           elapsed_ms: Math.round((totalWordsTyped / (wpm || 1)) * 60000), 
           wpm: Math.round(wpm), 
-          accuracy: Math.round(finalAccuracy * 100) / 100 
+          accuracy: Math.round(finalAccuracy * 100) / 100,
+          keystrokes: keystrokeCount,
+          start_time: sessionStartTime,
+          focus_events: focusEvents.blur,
+          client_hash: btoa(navigator.userAgent + sessionStartTime + keystrokeCount)
         };
         
         console.log('Submitting attempt:', attemptData);
@@ -702,8 +719,16 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
                 value={userInput}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
+                onFocus={() => {
+                  setIsFocused(true);
+                  // 🛡️ SECURITY: Track focus events for anti-cheat
+                  setFocusEvents(prev => ({...prev, focus: prev.focus + 1}));
+                }}
+                onBlur={() => {
+                  setIsFocused(false);
+                  // 🛡️ SECURITY: Track blur events for anti-cheat
+                  setFocusEvents(prev => ({...prev, blur: prev.blur + 1}));
+                }}
                 className="relative z-10 w-full h-full p-8 bg-transparent text-transparent font-mono no-liga text-lg leading-7 resize-none outline-none caret-transparent selection:bg-green-500/30 normal-case"
                 style={{ 
                   caretColor: 'transparent',

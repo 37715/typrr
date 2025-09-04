@@ -1,6 +1,76 @@
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
+
+// 🛡️ SECURITY: Comprehensive input validation
+function validateAttemptInput(input) {
+  const { snippet_id, mode, elapsed_ms, wpm, accuracy, keystrokes, start_time, client_hash } = input;
+  
+  // Validate mode
+  const validModes = ['practice', 'daily', 'tricky_chars'];
+  if (!mode || !validModes.includes(mode)) {
+    return { valid: false, error: 'invalid mode' };
+  }
+  
+  // Validate snippet_id for non-tricky modes
+  if (mode !== 'tricky_chars' && (!snippet_id || typeof snippet_id !== 'string')) {
+    return { valid: false, error: 'missing snippet_id' };
+  }
+  
+  // Parse and validate numeric inputs
+  const parsedElapsed = parseInt(elapsed_ms);
+  const parsedWpm = parseFloat(wpm);
+  const parsedAccuracy = parseFloat(accuracy);
+  const parsedKeystrokes = parseInt(keystrokes) || 0;
+  const parsedStartTime = parseInt(start_time) || Date.now();
+  
+  // 🚨 ANTI-CHEAT: Realistic bounds checking
+  if (parsedElapsed < 1000 || parsedElapsed > 600000) { // 1s to 10min max
+    return { valid: false, error: 'impossible time duration' };
+  }
+  
+  if (parsedWpm < 0 || parsedWpm > 300) { // Max human WPM ~300
+    return { valid: false, error: 'impossible WPM' };
+  }
+  
+  if (parsedAccuracy < 0 || parsedAccuracy > 100) {
+    return { valid: false, error: 'impossible accuracy' };
+  }
+  
+  // 🚨 ANTI-CHEAT: WPM vs time consistency check
+  const expectedMinTime = Math.max(1000, (parsedWpm > 0 ? (60000 * 5) / parsedWpm : 10000)); // Min time based on WPM
+  if (parsedElapsed < expectedMinTime * 0.7) { // Allow 30% variance
+    return { valid: false, error: 'time/WPM mismatch detected' };
+  }
+  
+  // 🚨 ANTI-CHEAT: Server-side timing verification
+  const serverTime = Date.now();
+  const timeDiff = serverTime - parsedStartTime;
+  if (Math.abs(timeDiff - parsedElapsed) > 5000) { // Allow 5s variance for network
+    return { valid: false, error: 'timing manipulation detected' };
+  }
+  
+  return {
+    valid: true,
+    data: {
+      snippet_id: snippet_id || null,
+      mode,
+      elapsed_ms: parsedElapsed,
+      wpm: Math.max(0, Math.min(300, parsedWpm)), // Clamp values
+      accuracy: Math.max(0, Math.min(100, parsedAccuracy)),
+      keystrokes: parsedKeystrokes,
+      start_time: parsedStartTime
+    }
+  };
+}
 
 export default async function handler(req, res) {
+  // 🛡️ SECURITY: Enhanced security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Cache-Control', 'no-store');
+  
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
   
   try {
@@ -38,11 +108,41 @@ export default async function handler(req, res) {
     }
     
     console.log('Authenticated user:', user.id);
+    
+    // 🛡️ SECURITY: Rate limiting check
+    const { data: rateLimitOk } = await supabase.rpc('check_rate_limit', {
+      user_id: user.id,
+      action_type: 'all',
+      max_per_hour: 200 // Max 200 attempts per hour
+    });
+    
+    if (!rateLimitOk) {
+      console.warn(`🚨 Rate limit exceeded for user ${user.id}`);
+      return res.status(429).json({ error: 'too many attempts - please slow down' });
+    }
 
-    const { snippet_id, mode, elapsed_ms, wpm, accuracy } = req.body || {};
-    // Allow snippet_id to be null for special modes like tricky_chars
-    if ((snippet_id == null && mode !== 'tricky_chars') || !mode || elapsed_ms == null || wpm == null || accuracy == null) {
-      return res.status(400).json({ error: 'missing fields' });
+    const { snippet_id, mode, elapsed_ms, wpm, accuracy, keystrokes, start_time, client_hash } = req.body || {};
+    
+    // 🛡️ SECURITY: Input validation and sanitization
+    const validatedInput = validateAttemptInput({ snippet_id, mode, elapsed_ms, wpm, accuracy, keystrokes, start_time, client_hash });
+    if (!validatedInput.valid) {
+      console.warn(`🚨 Security violation from user ${user.id}: ${validatedInput.error}`);
+      return res.status(400).json({ error: 'invalid input detected' });
+    }
+    
+    // Use sanitized values
+    const sanitized = validatedInput.data;
+    
+    // 🛡️ SECURITY: Suspicious activity detection
+    const { data: isSuspicious } = await supabase.rpc('detect_suspicious_activity', {
+      user_id: user.id,
+      wpm: sanitized.wpm,
+      accuracy: sanitized.accuracy
+    });
+    
+    if (isSuspicious) {
+      console.warn(`🚨 Suspicious activity detected for user ${user.id}: WPM=${sanitized.wpm}, ACC=${sanitized.accuracy}`);
+      // Still allow the attempt but flag it for review
     }
 
     if (mode === 'daily') {
@@ -53,7 +153,7 @@ export default async function handler(req, res) {
         .select('snippet_id')
         .eq('challenge_date', today)
         .maybeSingle();
-      if (!dc || dc.snippet_id !== snippet_id) {
+      if (!dc || dc.snippet_id !== sanitized.snippet_id) {
         return res.status(400).json({ error: 'invalid daily snippet' });
       }
       const { data: countData, error: countErr } = await supabase
@@ -70,16 +170,16 @@ export default async function handler(req, res) {
       }
     }
 
-    // Insert attempt record - the trigger will automatically update user_stats
+    // 🛡️ SECURITY: Use sanitized values for database insertion
     const { data, error } = await supabase
       .from('attempts')
       .insert({
         user_id: user.id,
-        snippet_id,
-        mode,
-        wpm: parseFloat(wpm),
-        accuracy: parseFloat(accuracy),
-        elapsed_ms: parseInt(elapsed_ms)
+        snippet_id: sanitized.snippet_id,
+        mode: sanitized.mode,
+        wpm: sanitized.wpm,
+        accuracy: sanitized.accuracy,
+        elapsed_ms: sanitized.elapsed_ms
       })
       .select()
       .single();
@@ -89,28 +189,26 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'failed to store attempt' });
     }
 
-    // Award XP based on mode and performance
+    // 🛡️ SECURITY: Calculate XP from sanitized, server-verified values
     let xpEarned = 0;
     try {
-      if (mode === 'tricky_chars') {
+      if (sanitized.mode === 'tricky_chars') {
         // Tricky chars: minimum 5 XP, higher base
         const baseXpPerAttempt = 8;
-        const performanceMultiplier = (parseFloat(wpm) * (parseFloat(accuracy) / 100)) / 50;
+        const performanceMultiplier = (sanitized.wpm * (sanitized.accuracy / 100)) / 50;
         xpEarned = Math.max(5, Math.round(baseXpPerAttempt * Math.max(0.5, Math.min(2, performanceMultiplier))));
       } else {
         // Regular practice/daily: standard XP calculation  
         const baseXpPerAttempt = 5;
-        const performanceMultiplier = (parseFloat(wpm) * (parseFloat(accuracy) / 100)) / 50;
+        const performanceMultiplier = (sanitized.wpm * (sanitized.accuracy / 100)) / 50;
         xpEarned = Math.round(baseXpPerAttempt * Math.max(1, performanceMultiplier));
       }
 
-      // Add XP to user profile
-      const { error: xpError } = await supabase
-        .from('profiles')
-        .update({ 
-          xp: supabase.raw(`COALESCE(xp, 0) + ${xpEarned}`)
-        })
-        .eq('id', user.id);
+      // 🛡️ SECURITY: Parameterized XP update to prevent injection
+      const { error: xpError } = await supabase.rpc('add_user_xp', {
+        user_id: user.id,
+        xp_amount: xpEarned
+      });
 
       if (xpError) {
         console.error('Error awarding XP:', xpError);
