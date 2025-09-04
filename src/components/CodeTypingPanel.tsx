@@ -859,8 +859,8 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         </div>
       )}
 
-      {/* Character-Specific Stats - Show after completion for logged-in users */}
-      {isComplete && !isLocked && isLoggedIn && (
+      {/* Character-Specific Stats - Show after completion for all users */}
+      {isComplete && !isLocked && (
         <CharacterStats refreshTrigger={statsRefreshTrigger} />
       )}
 
