@@ -89,7 +89,7 @@ async function handleDailyLeaderboard(supabase, res) {
   const userIds = bestAttempts.map(attempt => attempt.user_id);
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, username, avatar_url')
+    .select('id, username, avatar_url, xp')
     .in('id', userIds);
   
   const { data: userStats, error: statsError } = await supabase
@@ -120,7 +120,7 @@ async function handleDailyLeaderboard(supabase, res) {
   const leaderboard = bestAttempts.map(attempt => {
     const profile = profiles.find(p => p.id === attempt.user_id);
     const stats = userStats?.find(s => s.user_id === attempt.user_id);
-    const totalXp = stats ? calculateXp(stats.total_attempts || 0, stats.avg_wpm || 0, stats.avg_accuracy || 0) : 150;
+    const totalXp = profile?.xp || 0;
     
     return {
       user_id: attempt.user_id,
@@ -175,7 +175,7 @@ async function handleTrickyCharsLeaderboard(supabase, res) {
   const userIds = bestAttempts.map(attempt => attempt.user_id);
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, username, avatar_url')
+    .select('id, username, avatar_url, xp')
     .in('id', userIds);
   
   const { data: userStats, error: statsError } = await supabase
@@ -206,7 +206,7 @@ async function handleTrickyCharsLeaderboard(supabase, res) {
   const leaderboard = bestAttempts.map(attempt => {
     const profile = profiles.find(p => p.id === attempt.user_id);
     const stats = userStats?.find(s => s.user_id === attempt.user_id);
-    const totalXp = stats ? calculateXp(stats.total_attempts || 0, stats.avg_wpm || 0, stats.avg_accuracy || 0) : 150;
+    const totalXp = profile?.xp || 0;
     
     return {
       user_id: attempt.user_id,

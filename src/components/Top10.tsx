@@ -238,8 +238,8 @@ export const Top10: React.FC<Top10Props> = ({ className = '', refreshTrigger }) 
                         )}
                       </div>
                       {(() => {
-                        // Calculate XP if not provided by API
-                        const xpValue = entry.total_xp || (entry.total_attempts ? (entry.total_attempts * 5) * ((entry.wpm * (entry.accuracy || 100) / 100) / 50) : 150);
+                        // Use XP from API (now comes from database)
+                        const xpValue = entry.total_xp || 0;
                         const level = getLevelFromXP(xpValue);
                         const LevelIcon = level.icon;
                         return (
@@ -342,7 +342,7 @@ export const Top10: React.FC<Top10Props> = ({ className = '', refreshTrigger }) 
                       )}
                     </div>
                     {(() => {
-                      const xpValue = entry.total_xp || (entry.total_attempts ? (entry.total_attempts * 5) * ((entry.wpm * (entry.accuracy || 100) / 100) / 50) : 150);
+                      const xpValue = entry.total_xp || 0;
                       const level = getLevelFromXP(xpValue);
                       const LevelIcon = level.icon;
                       return (

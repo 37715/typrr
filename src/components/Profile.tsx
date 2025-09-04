@@ -14,6 +14,7 @@ interface Profile {
   github_username?: string;
   github_avatar_url?: string;
   github_connected_at?: string;
+  xp?: number;
 }
 
 interface UserStats {
@@ -757,7 +758,8 @@ export const Profile: React.FC = () => {
   const displayProfile = isOwnProfile ? profile : otherUserProfile;
   const displayStats = isOwnProfile ? userStats : otherUserStats;
   
-  const totalXp = calculateXp(displayStats?.total_attempts || 0, displayStats?.avg_wpm || 0, displayStats?.avg_accuracy || 0);
+  // Use XP from profile database instead of calculating it
+  const totalXp = profile?.xp || 0;
   
   const level = getLevelFromXP(totalXp);
   const nextLevel = levels.find(l => l.threshold > totalXp);

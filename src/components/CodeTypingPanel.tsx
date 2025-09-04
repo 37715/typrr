@@ -235,10 +235,36 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     fetchAttemptsRemaining();
   }, [isDailyMode, isLoggedIn]);
 
-  // Reset attempt recorded state when snippet changes
+  // Reset attempt recorded state when snippet changes and refresh attempts
   useEffect(() => {
     setAttemptRecorded(false);
-  }, [snippet]);
+    
+    // Also refresh attempts remaining for daily mode
+    if (isDailyMode && isLoggedIn) {
+      const fetchAttemptsRemaining = async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.access_token) return;
+
+          const response = await fetch('/api/daily-attempts-remaining', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setAttemptsRemaining(data.attempts_remaining);
+            console.log('Refreshed attempts on snippet change:', data.attempts_remaining);
+          }
+        } catch (error) {
+          console.error('Error refreshing attempts on snippet change:', error);
+        }
+      };
+      
+      fetchAttemptsRemaining();
+    }
+  }, [snippet, isDailyMode, isLoggedIn]);
 
   // Track attempt completion for daily mode
   useEffect(() => {
@@ -568,10 +594,9 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
           }
         }
         
-        // Calculate and show XP gained for logged in users
-        if (isLoggedIn) {
-          const earnedXp = calculateXpGained(Math.round(wpm), finalAccuracy);
-          setXpGained(earnedXp);
+        // Show actual XP earned from API response for logged in users
+        if (isLoggedIn && response.ok && result.xp_earned) {
+          setXpGained(result.xp_earned);
           setShowXpMessage(true);
           
           // Hide XP message after 4 seconds
@@ -793,11 +818,11 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
           {isDailyMode && attemptsRemaining > 0 && (
             <div className="mt-4 animate-in slide-in-from-bottom-2 duration-700">
               <button
-                onClick={handleRefresh}
-                className="inline-flex items-center space-x-2 px-6 py-3 rounded-lg border lowercase font-medium transition-all duration-200 bg-gradient-to-r from-blue-500 to-purple-500 text-white border-transparent hover:from-blue-600 hover:to-purple-600 hover:shadow-lg hover:shadow-blue-500/25 active:scale-95"
+                onClick={onRefresh}
+                className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg border lowercase font-medium transition-colors duration-200 bg-zinc-50 text-zinc-900 border-zinc-200 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
               >
                 <span>try again</span>
-                <span className="text-xs opacity-75">({attemptsRemaining} left)</span>
+                <span className="text-xs opacity-60">({attemptsRemaining} left)</span>
               </button>
             </div>
           )}
