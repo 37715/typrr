@@ -59,6 +59,7 @@ export default function CharacterStats({ refreshTrigger }: CharacterStatsProps) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [heatmapMode, setHeatmapMode] = useState<'accuracy' | 'speed'>('accuracy');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const fetchCharacterStats = async () => {
     try {
@@ -67,9 +68,12 @@ export default function CharacterStats({ refreshTrigger }: CharacterStatsProps) 
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        throw new Error('no authentication token');
+        setIsLoggedIn(false);
+        setLoading(false);
+        return;
       }
 
+      setIsLoggedIn(true);
       const response = await fetch('/api/character-stats', {
         method: 'GET',
         headers: {
@@ -98,6 +102,58 @@ export default function CharacterStats({ refreshTrigger }: CharacterStatsProps) 
   useEffect(() => {
     fetchCharacterStats();
   }, [refreshTrigger]);
+
+  // Show login prompt for non-authenticated users
+  if (!loading && !isLoggedIn) {
+    return (
+      <div className="space-y-8 mt-8">
+        {/* Header */}
+        <div className="text-center">
+          <div className="mb-2">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+              character analytics
+            </h2>
+          </div>
+          <p className="text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
+            detailed insights into your typing patterns, weaknesses, and areas for improvement
+          </p>
+        </div>
+
+        {/* Login Required Preview */}
+        <div className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm rounded-2xl p-12 border border-zinc-200/50 dark:border-zinc-700/50">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <BarChart3 className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
+              analytics preview
+            </h3>
+            <p className="text-zinc-600 dark:text-zinc-400 mb-8 max-w-md mx-auto">
+              sign in to unlock detailed typing analytics including keyboard heatmaps, 
+              problem character analysis, and personalized improvement insights
+            </p>
+            
+            {/* Preview Heatmap */}
+            <div className="mb-8 opacity-60 pointer-events-none">
+              <KeyboardHeatmap 
+                characterStats={[]} // Empty array to show placeholder
+                mode={heatmapMode}
+                onModeChange={setHeatmapMode}
+              />
+            </div>
+            
+            <div className="inline-flex items-center gap-3 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors cursor-pointer">
+              <span className="font-medium">sign in to view analytics</span>
+            </div>
+            
+            <div className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+              track your progress • identify weaknesses • improve faster
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
