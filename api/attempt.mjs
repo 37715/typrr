@@ -40,7 +40,8 @@ export default async function handler(req, res) {
     console.log('Authenticated user:', user.id);
 
     const { snippet_id, mode, elapsed_ms, wpm, accuracy } = req.body || {};
-    if (!snippet_id || !mode || elapsed_ms == null || wpm == null || accuracy == null) {
+    // Allow snippet_id to be null for special modes like tricky_chars
+    if ((snippet_id == null && mode !== 'tricky_chars') || !mode || elapsed_ms == null || wpm == null || accuracy == null) {
       return res.status(400).json({ error: 'missing fields' });
     }
 

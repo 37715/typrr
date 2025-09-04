@@ -174,8 +174,10 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
         const result = await response.json();
         console.log('Attempt response:', result);
         
-        // Show XP gained - lower amount for tricky chars
-        const earnedXp = Math.round(Math.max(5, Math.min(10, Math.round(wpm * (accuracy / 100) * 0.2))));
+        // Show XP gained - lower amount for tricky chars (matches Profile.tsx calculation)
+        const baseXpPerAttempt = 2; // Lower base for tricky chars
+        const performanceMultiplier = (wpm * (accuracy / 100)) / 50;
+        const earnedXp = Math.round(baseXpPerAttempt * Math.max(0.5, Math.min(2, performanceMultiplier)));
         setXpGained(earnedXp);
         setShowXpMessage(true);
         

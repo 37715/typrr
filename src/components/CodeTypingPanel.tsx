@@ -240,13 +240,13 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     setAttemptRecorded(false);
   }, [snippet]);
 
-  // When a daily attempt completes, decrement locally (server will be updated when attempt is submitted)
+  // Track attempt completion for daily mode
   useEffect(() => {
     if (!isDailyMode) return;
     if (!isComplete) return;
     if (attemptRecorded) return;
     setAttemptRecorded(true);
-    setAttemptsRemaining(prev => Math.max(0, prev - 1));
+    // Note: attemptsRemaining is now updated server-side after API submission
   }, [isComplete, attemptRecorded, isDailyMode]);
 
   const fetchLeaderboard = async () => {
@@ -550,6 +550,24 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         const result = await response.json();
         console.log('Attempt response:', result);
         
+        // Refresh attempts remaining for daily mode after successful submission
+        if (response.ok && isDailyMode && isLoggedIn) {
+          try {
+            const attemptsResponse = await fetch('/api/daily-attempts-remaining', {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            if (attemptsResponse.ok) {
+              const attemptsData = await attemptsResponse.json();
+              setAttemptsRemaining(attemptsData.attempts_remaining);
+              console.log('Updated attempts remaining:', attemptsData.attempts_remaining);
+            }
+          } catch (error) {
+            console.error('Error refreshing attempts remaining:', error);
+          }
+        }
+        
         // Calculate and show XP gained for logged in users
         if (isLoggedIn) {
           const earnedXp = calculateXpGained(Math.round(wpm), finalAccuracy);
@@ -768,6 +786,19 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
               <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg border lowercase bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/20">
                 <span className="text-sm font-medium">+{xpGained} xp earned</span>
               </div>
+            </div>
+          )}
+          
+          {/* Try Again button for daily mode when attempts remain */}
+          {isDailyMode && attemptsRemaining > 0 && (
+            <div className="mt-4 animate-in slide-in-from-bottom-2 duration-700">
+              <button
+                onClick={handleRefresh}
+                className="inline-flex items-center space-x-2 px-6 py-3 rounded-lg border lowercase font-medium transition-all duration-200 bg-gradient-to-r from-blue-500 to-purple-500 text-white border-transparent hover:from-blue-600 hover:to-purple-600 hover:shadow-lg hover:shadow-blue-500/25 active:scale-95"
+              >
+                <span>try again</span>
+                <span className="text-xs opacity-75">({attemptsRemaining} left)</span>
+              </button>
             </div>
           )}
         </div>
