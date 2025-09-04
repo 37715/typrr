@@ -43,9 +43,9 @@ export default async function handler(req, res) {
     const today = new Date().toISOString().slice(0, 10);
 
     // Count today's daily attempts for this user
-    const { data: countData, error: countError } = await supabase
+    const { count: attemptsUsed, error: countError } = await supabase
       .from('attempts')
-      .select('id', { count: 'exact', head: true })
+      .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('mode', 'daily')
       .gte('created_at', today + 'T00:00:00Z')
@@ -56,13 +56,13 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'failed to count attempts' });
     }
 
-    const attemptsUsed = countData?.length || 0;
-    const attemptsRemaining = Math.max(0, 3 - attemptsUsed);
+    const attemptsUsedCount = attemptsUsed || 0;
+    const attemptsRemaining = Math.max(0, 3 - attemptsUsedCount);
 
-    console.log(`✅ User ${user.id} has used ${attemptsUsed}/3 daily attempts today`);
+    console.log(`✅ User ${user.id} has used ${attemptsUsedCount}/3 daily attempts today`);
     return res.status(200).json({ 
       attempts_remaining: attemptsRemaining,
-      attempts_used: attemptsUsed,
+      attempts_used: attemptsUsedCount,
       max_attempts: 3
     });
 
