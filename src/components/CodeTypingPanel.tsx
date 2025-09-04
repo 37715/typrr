@@ -5,6 +5,7 @@ import { LeaderboardModal } from '@/components/ui/leaderboard-modal';
 import { LanguageFilterDropdown } from '@/components/ui/language-filter-dropdown';
 import GlassAuthModal from '@/components/ui/auth-model';
 import { supabase } from '@/lib/supabase';
+import CharacterStats from './stats/CharacterStats';
 
 interface CodeTypingPanelProps {
   snippet: string;
@@ -58,6 +59,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
       return localStorage.getItem('typrr_auto_next') === '1';
     } catch { return false; }
   });
+  const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0);
 
   const startTimestampRef = useRef<number>(0);
   const [totalMistakes, setTotalMistakes] = useState(0);
@@ -618,6 +620,9 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
           
           // Hide XP message after 4 seconds
           setTimeout(() => setShowXpMessage(false), 4000);
+          
+          // Trigger stats refresh after successful attempt
+          setStatsRefreshTrigger(prev => prev + 1);
         }
       } catch (error) {
         console.error('Error submitting attempt:', error);
@@ -852,6 +857,11 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {/* Character-Specific Stats - Show after completion for logged-in users */}
+      {isComplete && !isLocked && isLoggedIn && (
+        <CharacterStats refreshTrigger={statsRefreshTrigger} />
       )}
 
       <GlassAuthModal

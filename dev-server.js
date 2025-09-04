@@ -129,6 +129,17 @@ async function loadApiRoutes() {
       console.error('❌ Failed to load daily attempts remaining route:', err.message);
     }
     
+    // Add character stats route
+    try {
+      const characterStatsModule = await import('./api/character-stats.mjs');
+      app.get('/api/character-stats', (req, res) => {
+        characterStatsModule.default(req, res);
+      });
+      console.log('✅ Character stats route registered');
+    } catch (err) {
+      console.error('❌ Failed to load character stats route:', err.message);
+    }
+    
     try {
       // Import the daily challenge handler
       const dailyModule = await import('./api/daily.js');
