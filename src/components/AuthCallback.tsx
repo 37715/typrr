@@ -77,13 +77,13 @@ export const AuthCallback: React.FC = () => {
 
   if (processing) {
     return (
-      <div className=\"min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900\">
-        <div className=\"text-center\">
-          <Loader2 className=\"w-8 h-8 animate-spin mx-auto mb-4 text-blue-600\" />
-          <h2 className=\"text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2\">
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
             completing authentication...
           </h2>
-          <p className=\"text-zinc-600 dark:text-zinc-400\">
+          <p className="text-zinc-600 dark:text-zinc-400">
             please wait while we sign you in
           </p>
         </div>
@@ -93,20 +93,20 @@ export const AuthCallback: React.FC = () => {
 
   if (error) {
     return (
-      <div className=\"min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900\">
-        <div className=\"max-w-md p-6 bg-white dark:bg-zinc-800 rounded-lg shadow-lg text-center\">
-          <div className=\"w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4\">
-            <span className=\"text-2xl\">⚠️</span>
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900">
+        <div className="max-w-md p-6 bg-white dark:bg-zinc-800 rounded-lg shadow-lg text-center">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">⚠️</span>
           </div>
-          <h2 className=\"text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2\">
+          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
             authentication failed
           </h2>
-          <p className=\"text-zinc-600 dark:text-zinc-400 mb-4\">
+          <p className="text-zinc-600 dark:text-zinc-400 mb-4">
             {error}
           </p>
           <button
             onClick={() => window.location.href = '/'}
-            className=\"px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors\"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             return to homepage
           </button>
