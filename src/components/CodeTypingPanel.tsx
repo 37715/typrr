@@ -366,7 +366,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
       }
     }
 
-    // Smart Backspace navigation - jump over indentation
+    // Smart Backspace navigation - jump over indentation and up lines
     if (e.key === 'Backspace') {
       const textarea = textareaRef.current;
       if (!textarea) return;
@@ -374,7 +374,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
       const cursorPos = textarea.selectionStart ?? 0;
       const selectionEnd = textarea.selectionEnd ?? 0;
       
-      // Only handle smart backspace if no text is selected and cursor is at line start
+      // Only handle smart backspace if no text is selected and cursor position > 0
       if (cursorPos === selectionEnd && cursorPos > 0) {
         const lines = userInput.split('\n');
         let currentLineStart = 0;
@@ -393,30 +393,33 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         const positionInLine = cursorPos - currentLineStart;
         const currentLine = lines[currentLineIndex] || '';
         
-        // If at start of line (position 0) and not on first line
+        // If at start of line (position 0) and not on first line - jump to previous line end
         if (positionInLine === 0 && currentLineIndex > 0) {
           e.preventDefault();
           
-          // Jump to end of previous line
-          const prevLineEnd = currentLineStart - 1; // Before the newline
+          // Jump to end of previous line (before the newline)
+          const prevLineEnd = currentLineStart - 1;
           textarea.setSelectionRange(prevLineEnd, prevLineEnd);
           
-          // Remove the newline character
-          const newValue = userInput.slice(0, prevLineEnd) + userInput.slice(cursorPos);
-          setUserInput(newValue);
-          
+          // Don't delete anything, just move cursor
           return;
         }
         
-        // If at start of indented content, jump over all leading whitespace
+        // If within leading whitespace, jump to start of line OR previous line
         else if (positionInLine > 0) {
           const leadingWhitespace = currentLine.match(/^\s*/);
           if (leadingWhitespace && positionInLine <= leadingWhitespace[0].length) {
             e.preventDefault();
             
-            // Jump to start of line
-            const lineStart = currentLineStart;
-            textarea.setSelectionRange(lineStart, lineStart);
+            // If already at start of line content, jump to previous line
+            if (positionInLine === leadingWhitespace[0].length && currentLineIndex > 0) {
+              const prevLineEnd = currentLineStart - 1;
+              textarea.setSelectionRange(prevLineEnd, prevLineEnd);
+            } else {
+              // Jump to start of line (skip all indentation)
+              const lineStart = currentLineStart;
+              textarea.setSelectionRange(lineStart, lineStart);
+            }
             
             return;
           }
