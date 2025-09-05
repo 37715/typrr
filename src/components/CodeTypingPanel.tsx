@@ -59,6 +59,9 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     } catch { return false; }
   });
   const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0);
+  
+  // Caps lock detection state
+  const [isCapsLockOn, setIsCapsLockOn] = useState(false);
 
   const startTimestampRef = useRef<number>(0);
   const [totalMistakes, setTotalMistakes] = useState(0);
@@ -328,6 +331,14 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // 🛡️ SECURITY: Track keystroke count for anti-cheat
     setKeystrokeCount(prev => prev + 1);
+    
+    // Check for caps lock status on letter keys
+    if (e.key.length === 1 && e.key.match(/[a-zA-Z]/)) {
+      const isShiftPressed = e.shiftKey;
+      const isUpperCase = e.key === e.key.toUpperCase();
+      const capsLockDetected = isUpperCase !== isShiftPressed;
+      setIsCapsLockOn(capsLockDetected);
+    }
     // Preserve typing within snippet length and support Tab indentation
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -352,6 +363,64 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
           const nextPos = selectionStart + insertion.length;
           textarea.setSelectionRange(nextPos, nextPos);
         });
+      }
+    }
+
+    // Smart Backspace navigation - jump over indentation
+    if (e.key === 'Backspace') {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      
+      const cursorPos = textarea.selectionStart ?? 0;
+      const selectionEnd = textarea.selectionEnd ?? 0;
+      
+      // Only handle smart backspace if no text is selected and cursor is at line start
+      if (cursorPos === selectionEnd && cursorPos > 0) {
+        const lines = userInput.split('\n');
+        let currentLineStart = 0;
+        let currentLineIndex = 0;
+        
+        // Find which line we're on and where it starts
+        for (let i = 0; i < lines.length; i++) {
+          const lineEnd = currentLineStart + lines[i].length;
+          if (cursorPos <= lineEnd) {
+            currentLineIndex = i;
+            break;
+          }
+          currentLineStart = lineEnd + 1; // +1 for newline
+        }
+        
+        const positionInLine = cursorPos - currentLineStart;
+        const currentLine = lines[currentLineIndex] || '';
+        
+        // If at start of line (position 0) and not on first line
+        if (positionInLine === 0 && currentLineIndex > 0) {
+          e.preventDefault();
+          
+          // Jump to end of previous line
+          const prevLineEnd = currentLineStart - 1; // Before the newline
+          textarea.setSelectionRange(prevLineEnd, prevLineEnd);
+          
+          // Remove the newline character
+          const newValue = userInput.slice(0, prevLineEnd) + userInput.slice(cursorPos);
+          setUserInput(newValue);
+          
+          return;
+        }
+        
+        // If at start of indented content, jump over all leading whitespace
+        else if (positionInLine > 0) {
+          const leadingWhitespace = currentLine.match(/^\s*/);
+          if (leadingWhitespace && positionInLine <= leadingWhitespace[0].length) {
+            e.preventDefault();
+            
+            // Jump to start of line
+            const lineStart = currentLineStart;
+            textarea.setSelectionRange(lineStart, lineStart);
+            
+            return;
+          }
+        }
       }
     }
 
@@ -712,6 +781,15 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
                   style={enterHintPosition}
                 >
                   <span className="text-blue-600 dark:text-blue-400 text-xs">↵</span>
+                </div>
+              )}
+              
+              {/* Caps lock indicator - subtle and positioned in corner */}
+              {isCapsLockOn && hasStarted && !isComplete && (
+                <div className="absolute top-3 left-4 z-20 pointer-events-none animate-in fade-in duration-300">
+                  <div className="bg-zinc-50 dark:bg-zinc-900/90 backdrop-blur-sm border border-zinc-300 dark:border-zinc-700 rounded-md px-2 py-1 shadow-sm">
+                    <span className="text-xs font-mono text-zinc-600 dark:text-zinc-400 lowercase">caps lock</span>
+                  </div>
                 </div>
               )}
               

@@ -59,6 +59,9 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
   const startTimestampRef = useRef<number>(0);
   const [totalMistakes, setTotalMistakes] = useState(0);
   const [totalKeysPressed, setTotalKeysPressed] = useState(0);
+  
+  // Caps lock detection state
+  const [isCapsLockOn, setIsCapsLockOn] = useState(false);
 
   // Generate initial sequence and ensure focus
   useEffect(() => {
@@ -114,6 +117,20 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Handle keydown for caps lock detection
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // 🛡️ SECURITY: Track keystroke count for anti-cheat
+    setKeystrokeCount(prev => prev + 1);
+    
+    // Check for caps lock status on letter keys
+    if (e.key.length === 1 && e.key.match(/[a-zA-Z]/)) {
+      const isShiftPressed = e.shiftKey;
+      const isUpperCase = e.key === e.key.toUpperCase();
+      const capsLockDetected = isUpperCase !== isShiftPressed;
+      setIsCapsLockOn(capsLockDetected);
+    }
+  };
+  
   // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -305,6 +322,15 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
 
         {/* Character sequence display */}
         <div className="relative">
+          {/* Caps lock indicator - subtle and positioned in corner */}
+          {isCapsLockOn && hasStarted && !isComplete && (
+            <div className="absolute top-3 left-4 z-20 pointer-events-none animate-in fade-in duration-300">
+              <div className="bg-zinc-50 dark:bg-zinc-900/90 backdrop-blur-sm border border-zinc-300 dark:border-zinc-700 rounded-md px-2 py-1 shadow-sm">
+                <span className="text-xs font-mono text-zinc-600 dark:text-zinc-400 lowercase">caps lock</span>
+              </div>
+            </div>
+          )}
+          
           <div className="p-8 bg-gradient-to-b from-zinc-100/50 to-white dark:from-zinc-800/50 dark:to-zinc-900">
             {/* Instruction text when not started */}
             {!hasStarted && (
@@ -322,6 +348,7 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
             ref={textareaRef}
             value={userInput}
             onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             className="absolute inset-0 w-full h-full bg-transparent border-none outline-none resize-none text-transparent"
