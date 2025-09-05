@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, Loader2, AlertTriangle } from 'lucide-react';
+import { BarChart3, Loader2, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import ProblemCharacters from './ProblemCharacters';
 import KeystrokeSpeed from './KeystrokeSpeed';
@@ -60,6 +60,7 @@ export default function CharacterStats({ refreshTrigger }: CharacterStatsProps) 
   const [error, setError] = useState<string | null>(null);
   const [heatmapMode, setHeatmapMode] = useState<'accuracy' | 'speed'>('accuracy');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const fetchCharacterStats = async () => {
     try {
@@ -107,49 +108,97 @@ export default function CharacterStats({ refreshTrigger }: CharacterStatsProps) 
   if (!loading && !isLoggedIn) {
     return (
       <div className="space-y-8 mt-8">
-        {/* Header */}
-        <div className="text-center">
-          <div className="mb-2">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-              character analytics
-            </h2>
-          </div>
-          <p className="text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
-            detailed insights into your typing patterns, weaknesses, and areas for improvement
-          </p>
-        </div>
+        {/* Collapsible Header */}
+        <div 
+          className="cursor-pointer bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm rounded-2xl border border-zinc-200/50 dark:border-zinc-700/50 transition-all duration-200 hover:bg-white/70 dark:hover:bg-zinc-900/70"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <div className="p-6">
+            {/* Development Notice */}
+            <div className="mb-4 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                <span className="text-sm text-amber-800 dark:text-amber-200 font-medium">
+                  still in development
+                </span>
+              </div>
+            </div>
 
-        {/* Login Required Preview */}
-        <div className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm rounded-2xl p-12 border border-zinc-200/50 dark:border-zinc-700/50">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <BarChart3 className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
-              analytics preview
-            </h3>
-            <p className="text-zinc-600 dark:text-zinc-400 mb-8 max-w-md mx-auto">
-              sign in to unlock detailed typing analytics including keyboard heatmaps, 
-              problem character analysis, and personalized improvement insights
-            </p>
-            
-            {/* Preview Heatmap */}
-            <div className="mb-8 opacity-60 pointer-events-none">
-              <KeyboardHeatmap 
-                characterStats={[]} // Empty array to show placeholder
-                mode={heatmapMode}
-                onModeChange={setHeatmapMode}
-              />
-            </div>
-            
-            <div className="inline-flex items-center gap-3 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors cursor-pointer">
-              <span className="font-medium">sign in to view analytics</span>
-            </div>
-            
-            <div className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
-              track your progress • identify weaknesses • improve faster
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                  <BarChart3 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+                    character analytics
+                  </h2>
+                  <p className="text-zinc-600 dark:text-zinc-400 text-sm">
+                    click to view detailed typing insights
+                  </p>
+                </div>
+              </div>
+              {isExpanded ? (
+                <ChevronUp className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+              )}
             </div>
           </div>
+
+          {/* Expanded Content */}
+          {isExpanded && (
+            <div className="relative px-6 pb-6 border-t border-zinc-200 dark:border-zinc-700 pt-6">
+              <div className="filter blur-sm pointer-events-none">
+                <div className="text-center mb-6">
+                  <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+                    detailed insights into your typing patterns, weaknesses, and areas for improvement
+                  </p>
+                  
+                  {/* Preview Heatmap */}
+                  <div className="mb-6">
+                    <KeyboardHeatmap 
+                      characterStats={[]} // Empty array to show placeholder
+                      mode={heatmapMode}
+                      onModeChange={setHeatmapMode}
+                    />
+                  </div>
+                  
+                  {/* Mock Stats Grid */}
+                  <div className="grid lg:grid-cols-2 gap-6">
+                    <div className="bg-zinc-100 dark:bg-zinc-800 rounded-xl p-4 h-32">
+                      <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">problem characters</div>
+                      <div className="space-y-2">
+                        <div className="h-3 bg-zinc-300 dark:bg-zinc-600 rounded"></div>
+                        <div className="h-3 bg-zinc-300 dark:bg-zinc-600 rounded w-4/5"></div>
+                        <div className="h-3 bg-zinc-300 dark:bg-zinc-600 rounded w-3/5"></div>
+                      </div>
+                    </div>
+                    <div className="bg-zinc-100 dark:bg-zinc-800 rounded-xl p-4 h-32">
+                      <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">keystroke speed</div>
+                      <div className="space-y-2">
+                        <div className="h-3 bg-zinc-300 dark:bg-zinc-600 rounded"></div>
+                        <div className="h-3 bg-zinc-300 dark:bg-zinc-600 rounded w-3/4"></div>
+                        <div className="h-3 bg-zinc-300 dark:bg-zinc-600 rounded w-2/3"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Login Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm rounded-b-2xl">
+                <div className="text-center">
+                  <div className="inline-flex items-center gap-3 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors cursor-pointer">
+                    <span className="font-medium">sign in to unlock analytics</span>
+                  </div>
+                  <div className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+                    track your progress • identify weaknesses • improve faster
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -200,98 +249,125 @@ export default function CharacterStats({ refreshTrigger }: CharacterStatsProps) 
 
   return (
     <div className="space-y-8 mt-8">
-      {/* Header */}
-      <div className="text-center">
-        <div className="mb-2">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            character analytics
-          </h2>
-        </div>
-        <p className="text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
-          detailed insights into your typing patterns, weaknesses, and areas for improvement
-        </p>
-        
-        {/* Summary Stats */}
-        {statsData.summary.total_characters_analyzed > 0 && (
-          <div className="mt-4 flex justify-center">
-            <div className="inline-flex items-center gap-6 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
-              <div className="text-center">
-                <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                  {statsData.summary.total_characters_analyzed.toLocaleString()}
-                </div>
-                <div className="text-xs text-zinc-600 dark:text-zinc-400">characters analyzed</div>
+      {/* Collapsible Header */}
+      <div 
+        className="cursor-pointer bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm rounded-2xl border border-zinc-200/50 dark:border-zinc-700/50 transition-all duration-200 hover:bg-white/70 dark:hover:bg-zinc-900/70"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="p-6">
+          {/* Development Notice */}
+          <div className="mb-4 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+              <span className="text-sm text-amber-800 dark:text-amber-200 font-medium">
+                still in development
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                <BarChart3 className="w-6 h-6 text-white" />
               </div>
-              {statsData.summary.problem_character_count > 0 && (
-                <>
-                  <div className="w-px h-8 bg-zinc-300 dark:bg-zinc-600" />
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
-                      {statsData.summary.problem_character_count}
-                    </div>
-                    <div className="text-xs text-zinc-600 dark:text-zinc-400">problem characters</div>
-                  </div>
-                </>
-              )}
+              <div>
+                <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+                  character analytics
+                </h2>
+                <div className="flex items-center gap-4 text-sm text-zinc-600 dark:text-zinc-400">
+                  <span>click to {isExpanded ? 'hide' : 'view'} detailed insights</span>
+                  {statsData.summary.total_characters_analyzed > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>{statsData.summary.total_characters_analyzed.toLocaleString()} characters analyzed</span>
+                      {statsData.summary.problem_character_count > 0 && (
+                        <>
+                          <span>•</span>
+                          <span className="text-orange-600 dark:text-orange-400">
+                            {statsData.summary.problem_character_count} problem characters
+                          </span>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            {isExpanded ? (
+              <ChevronUp className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+            )}
+          </div>
+        </div>
+
+        {/* Expanded Content */}
+        {isExpanded && (
+          <div className="px-6 pb-6 border-t border-zinc-200 dark:border-zinc-700 pt-6">
+            <div className="text-center mb-6">
+              <p className="text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
+                detailed insights into your typing patterns, weaknesses, and areas for improvement
+              </p>
+            </div>
+
+            {/* Featured Keyboard Heatmap */}
+            <div className="mb-8">
+              <KeyboardHeatmap 
+                characterStats={[
+                  ...statsData.problem_characters.map(char => ({
+                    character: char.character,
+                    accuracy: char.accuracy,
+                    avg_time_ms: 200, // placeholder
+                    attempts: char.attempts
+                  })),
+                  ...statsData.keystroke_speed.fastest.map(char => ({
+                    character: char.character,
+                    accuracy: 95, // placeholder
+                    avg_time_ms: char.avg_time_ms,
+                    attempts: char.attempts
+                  })),
+                  ...statsData.keystroke_speed.slowest.map(char => ({
+                    character: char.character,
+                    accuracy: 90, // placeholder  
+                    avg_time_ms: char.avg_time_ms,
+                    attempts: char.attempts
+                  }))
+                ]}
+                mode={heatmapMode}
+                onModeChange={setHeatmapMode}
+              />
+            </div>
+
+            {/* Stats Components Grid */}
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* Problem Characters */}
+              <ProblemCharacters characters={statsData.problem_characters} />
+              
+              {/* Keystroke Speed */}
+              <KeystrokeSpeed 
+                fastest={statsData.keystroke_speed.fastest} 
+                slowest={statsData.keystroke_speed.slowest} 
+              />
+              
+              {/* Finger Usage Heatmap */}
+              <FingerUsageHeatmap fingerStats={statsData.finger_usage} />
+              
+              {/* Common Mistakes */}
+              <CommonMistakes mistakes={statsData.common_mistakes} />
+            </div>
+
+            {/* Footer Note */}
+            <div className="mt-8 text-center p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                📊 character-level tracking will be implemented in future updates. 
+                these components show the framework for detailed typing analysis.
+              </p>
+              <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
+                your typing data remains private and is used only to improve your experience
+              </div>
             </div>
           </div>
         )}
-      </div>
-
-      {/* Featured Keyboard Heatmap */}
-      <div className="mb-8">
-        <KeyboardHeatmap 
-          characterStats={[
-            ...statsData.problem_characters.map(char => ({
-              character: char.character,
-              accuracy: char.accuracy,
-              avg_time_ms: 200, // placeholder
-              attempts: char.attempts
-            })),
-            ...statsData.keystroke_speed.fastest.map(char => ({
-              character: char.character,
-              accuracy: 95, // placeholder
-              avg_time_ms: char.avg_time_ms,
-              attempts: char.attempts
-            })),
-            ...statsData.keystroke_speed.slowest.map(char => ({
-              character: char.character,
-              accuracy: 90, // placeholder  
-              avg_time_ms: char.avg_time_ms,
-              attempts: char.attempts
-            }))
-          ]}
-          mode={heatmapMode}
-          onModeChange={setHeatmapMode}
-        />
-      </div>
-
-      {/* Stats Components Grid */}
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* Problem Characters */}
-        <ProblemCharacters characters={statsData.problem_characters} />
-        
-        {/* Keystroke Speed */}
-        <KeystrokeSpeed 
-          fastest={statsData.keystroke_speed.fastest} 
-          slowest={statsData.keystroke_speed.slowest} 
-        />
-        
-        {/* Finger Usage Heatmap */}
-        <FingerUsageHeatmap fingerStats={statsData.finger_usage} />
-        
-        {/* Common Mistakes */}
-        <CommonMistakes mistakes={statsData.common_mistakes} />
-      </div>
-
-      {/* Footer Note */}
-      <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-2xl border border-blue-200 dark:border-blue-800">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          📊 <strong>analytics note:</strong> character-level tracking will be implemented in future updates. 
-          these components show the framework for detailed typing analysis.
-        </p>
-        <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
-          your typing data remains private and is used only to improve your experience
-        </div>
       </div>
     </div>
   );

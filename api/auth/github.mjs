@@ -127,8 +127,42 @@ async function handleCallback(req, res) {
 
     const githubUser = await userResponse.json();
 
-    // Store GitHub data (implement your storage logic here)
     console.log('✅ GitHub user data received:', githubUser.login);
+
+    // Check if this GitHub account is already linked to another user
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const { data: existingLink } = await supabase
+      .rpc('check_github_account_linkage', {
+        github_user_id: githubUser.id.toString(),
+        github_username: githubUser.login
+      });
+
+    if (existingLink && existingLink.length > 0 && existingLink[0].is_linked) {
+      // GitHub account is already linked to another user
+      const errorUrl = new URL(`${req.headers.origin || 'http://localhost:5173'}/profile`);
+      errorUrl.searchParams.set('github_error', 'already_linked');
+      errorUrl.searchParams.set('existing_user', existingLink[0].existing_username);
+      return res.redirect(302, errorUrl.toString());
+    }
+
+    // Link GitHub account to the current user
+    const linkResult = await supabase
+      .rpc('link_github_to_existing_user', {
+        user_id: original_user_id,
+        github_user_id: githubUser.id.toString(),
+        github_username: githubUser.login,
+        github_avatar: githubUser.avatar_url || null
+      });
+
+    if (!linkResult.data) {
+      const errorUrl = new URL(`${req.headers.origin || 'http://localhost:5173'}/profile`);
+      errorUrl.searchParams.set('github_error', 'link_failed');
+      return res.redirect(302, errorUrl.toString());
+    }
 
     // Redirect back to frontend with success
     const redirectUrl = new URL(`${req.headers.origin || 'http://localhost:5173'}/profile`);

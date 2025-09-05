@@ -7,6 +7,7 @@ import { PracticeTop10 } from './components/PracticeTop10';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Profile } from './components/Profile';
 import { TrickyChars } from './components/TrickyChars';
+import { AuthCallback } from './components/AuthCallback';
 
 function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -213,6 +214,7 @@ function App() {
                 onRefresh={handleRefresh}
               />
             } />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/:username" element={<Profile />} />
             <Route path="*" element={<Navigate to="/daily" replace />} />

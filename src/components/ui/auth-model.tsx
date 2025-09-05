@@ -91,12 +91,36 @@ export default function GlassAuthModal({
     }
   };
 
+  const handleGitHubAuth = async () => {
+    const redirectUrl = `${window.location.origin}/auth/callback`;
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: redirectUrl,
+        queryParams: {
+          // This helps us handle existing account conflicts
+          auth_mode: mode // 'login' or 'signup'
+        }
+      }
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    handleClose();
+    toast({ variant: 'success', title: 'redirecting to github...' });
+  };
+
   const handleSocial = async (provider: Provider) => {
     if (loading) return;
     setLoading(true);
     try {
       if (onSocial) {
         await onSocial(provider);
+      } else if (provider === 'github') {
+        // Special handling for GitHub to check for existing accounts
+        await handleGitHubAuth();
       } else {
         const redirectUrl = window.location.origin.includes('localhost') 
           ? `${window.location.origin}/profile?from=oauth`
