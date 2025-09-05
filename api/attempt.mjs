@@ -210,13 +210,20 @@ export default async function handler(req, res) {
         xpEarned = Math.round(baseXpPerAttempt * Math.max(1, performanceMultiplier));
       }
 
-      // 🛡️ SECURITY: Parameterized XP update to prevent injection (temporarily use direct update)
-      // TODO: Deploy security_functions.sql then use: supabase.rpc('add_user_xp', ...)
+      // 🛡️ SECURITY: Update XP using a safe method
+      // First get current XP, then update
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('xp')
+        .eq('id', user.id)
+        .single();
+      
+      const currentXp = currentProfile?.xp || 0;
+      const newXp = currentXp + xpEarned;
+      
       const { error: xpError } = await supabase
         .from('profiles')
-        .update({ 
-          xp: supabase.sql`COALESCE(xp, 0) + ${xpEarned}`
-        })
+        .update({ xp: newXp })
         .eq('id', user.id);
 
       if (xpError) {

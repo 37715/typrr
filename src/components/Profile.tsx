@@ -140,6 +140,10 @@ export const Profile: React.FC = () => {
       if (result?.success) {
         setProfile(prev => prev ? { ...prev, username: newUsername } : null);
         toast({ variant: 'success', title: 'username updated successfully' });
+        
+        // Exit edit mode after successful update
+        setIsEditingUsername(false);
+        setUsernameStatus('idle');
       } else {
         toast({ variant: 'error', title: result?.message || 'failed to update username' });
       }
@@ -759,7 +763,8 @@ export const Profile: React.FC = () => {
   const displayStats = isOwnProfile ? userStats : otherUserStats;
   
   // Use XP from profile database instead of calculating it
-  const totalXp = profile?.xp || 0;
+  // For other users, use their profile data; for own profile, use current user data
+  const totalXp = displayProfile?.xp || 0;
   
   const level = getLevelFromXP(totalXp);
   const nextLevel = levels.find(l => l.threshold > totalXp);

@@ -5,7 +5,6 @@ import { LeaderboardModal } from '@/components/ui/leaderboard-modal';
 import { LanguageFilterDropdown } from '@/components/ui/language-filter-dropdown';
 import GlassAuthModal from '@/components/ui/auth-model';
 import { supabase } from '@/lib/supabase';
-import CharacterStats from './stats/CharacterStats';
 
 interface CodeTypingPanelProps {
   snippet: string;
@@ -859,10 +858,6 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         </div>
       )}
 
-      {/* Character-Specific Stats - Show after completion for all users */}
-      {isComplete && !isLocked && (
-        <CharacterStats refreshTrigger={statsRefreshTrigger} />
-      )}
 
       <GlassAuthModal
         open={authOpen}

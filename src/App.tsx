@@ -8,6 +8,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Profile } from './components/Profile';
 import { TrickyChars } from './components/TrickyChars';
 import { AuthCallback } from './components/AuthCallback';
+import CharacterStats from './components/stats/CharacterStats';
 
 function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -19,6 +20,8 @@ function App() {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0);
+  const [isTypingComplete, setIsTypingComplete] = useState(false);
 
   // Function to normalize snippet content - handles escaped newlines and Windows line endings
   const normalizeSnippetContent = (content: string): string => {
@@ -40,13 +43,22 @@ function App() {
         refreshTimeoutRef.current = null;
       }, 2000); // Wait 2 seconds before refreshing leaderboard once
     }
+    
+    // Mark typing as complete and refresh stats
+    setIsTypingComplete(true);
+    setStatsRefreshTrigger(prev => prev + 1);
   }, []);
 
-  const handleReset = useCallback(() => {}, []);
+  const handleReset = useCallback(() => {
+    // Reset typing completion state when user resets
+    setIsTypingComplete(false);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     // Trigger a reload by incrementing the refresh trigger
     setRefreshTrigger(prev => prev + 1);
+    // Reset typing completion state when refreshing
+    setIsTypingComplete(false);
   }, []);
 
   const handleLanguageChange = useCallback((language: string) => {
@@ -166,6 +178,13 @@ function App() {
                 <div className="mt-8 max-w-4xl mx-auto">
                   <Top10 refreshTrigger={leaderboardRefresh} />
                 </div>
+                
+                {/* Character Analytics - shows below leaderboard after completion */}
+                {isTypingComplete && (
+                  <div className="mt-8 max-w-4xl mx-auto">
+                    <CharacterStats refreshTrigger={statsRefreshTrigger} />
+                  </div>
+                )}
               </>
             } />
             <Route path="/practice" element={
@@ -204,6 +223,13 @@ function App() {
                 <div className="xl:hidden mt-8 max-w-4xl mx-auto">
                   <PracticeTop10 selectedLanguage={selectedLanguage} />
                 </div>
+                
+                {/* Character Analytics - shows below leaderboard after completion */}
+                {isTypingComplete && (
+                  <div className="mt-8 max-w-4xl mx-auto">
+                    <CharacterStats refreshTrigger={statsRefreshTrigger} />
+                  </div>
+                )}
               </>
             } />
             <Route path="/tricky-chars" element={
