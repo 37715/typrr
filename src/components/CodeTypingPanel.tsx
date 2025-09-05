@@ -366,27 +366,51 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
       }
     }
 
-    // Smart backspace for speedtyping - jump to previous line when at line start
+    // Smart backspace for speedtyping - jump to previous line when in indentation
     if (e.key === 'Backspace') {
       const textarea = textareaRef.current;
       if (!textarea) return;
       
       const cursorPos = textarea.selectionStart ?? 0;
       
-      // Only handle when cursor is at the start of a line (right after a newline)
-      if (cursorPos > 0 && userInput[cursorPos - 1] === '\n') {
-        e.preventDefault();
+      if (cursorPos > 0) {
+        // Find the current line boundaries
+        const textUpToCursor = userInput.slice(0, cursorPos);
+        const lastNewlineIndex = textUpToCursor.lastIndexOf('\n');
+        const currentLineText = textUpToCursor.slice(lastNewlineIndex + 1);
         
-        // Delete the newline to go back to previous line
-        const newValue = userInput.slice(0, cursorPos - 1) + userInput.slice(cursorPos);
-        setUserInput(newValue);
+        // Check if we're in leading whitespace (spaces/tabs only)
+        const isInIndentation = /^\s+$/.test(currentLineText);
         
-        // Position cursor at end of previous line
-        requestAnimationFrame(() => {
-          textarea.setSelectionRange(cursorPos - 1, cursorPos - 1);
-        });
+        // If we're in indentation, jump to previous line instead of backing through spaces
+        if (isInIndentation && lastNewlineIndex >= 0) {
+          e.preventDefault();
+          
+          // Delete all the indentation and the newline to go to previous line
+          const newValue = userInput.slice(0, lastNewlineIndex) + userInput.slice(cursorPos);
+          setUserInput(newValue);
+          
+          // Position cursor at end of previous line
+          requestAnimationFrame(() => {
+            textarea.setSelectionRange(lastNewlineIndex, lastNewlineIndex);
+          });
+          
+          return;
+        }
         
-        return;
+        // If we're right after a newline (start of line), also jump up
+        if (userInput[cursorPos - 1] === '\n') {
+          e.preventDefault();
+          
+          const newValue = userInput.slice(0, cursorPos - 1) + userInput.slice(cursorPos);
+          setUserInput(newValue);
+          
+          requestAnimationFrame(() => {
+            textarea.setSelectionRange(cursorPos - 1, cursorPos - 1);
+          });
+          
+          return;
+        }
       }
     }
 
