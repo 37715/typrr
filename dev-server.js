@@ -310,9 +310,10 @@ async function loadApiRoutes() {
     }
     
     try {
-      const githubCallbackModule = await import('./api/auth/github-callback.mjs');
+      const githubModule = await import('./api/auth/github.mjs');
       app.get('/api/auth/github-callback', (req, res) => {
-        githubCallbackModule.default(req, res);
+        req.query.action = 'callback';
+        githubModule.default(req, res);
       });
       console.log('✅ GitHub OAuth callback route registered');
     } catch (err) {

@@ -18,10 +18,10 @@ export default async function handler(req, res) {
         return handleStart(req, res);
       case 'callback':
         return handleCallback(req, res);
-      case 'connect':
-        return handleConnect(req, res);
-      case 'link':
-        return handleLink(req, res);
+      case 'check':
+        return handleCheck(req, res);
+      case 'signup':
+        return handleSignup(req, res);
       default:
         return res.status(400).json({ error: 'invalid action parameter' });
     }
@@ -179,20 +179,135 @@ async function handleCallback(req, res) {
   }
 }
 
-async function handleConnect(req, res) {
+async function handleCheck(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'method not allowed' });
   }
 
-  // Implement connect logic here
-  return res.status(200).json({ message: 'connect endpoint - implement as needed' });
+  const { github_username, github_id } = req.body;
+  
+  if (!github_username && !github_id) {
+    return res.status(400).json({ error: 'github_username or github_id required' });
+  }
+
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+
+  // Check if GitHub account is already linked
+  const { data: existingLink } = await supabase
+    .rpc('check_github_account_linkage', {
+      github_user_id: github_id || '',
+      github_username: github_username || ''
+    });
+
+  if (existingLink && existingLink.length > 0) {
+    const linkData = existingLink[0];
+    return res.status(200).json({
+      is_linked: linkData.is_linked,
+      existing_user_id: linkData.existing_user_id,
+      existing_username: linkData.existing_username,
+      message: linkData.is_linked 
+        ? 'this github account is already linked to another user'
+        : 'github account is available'
+    });
+  }
+
+  return res.status(200).json({
+    is_linked: false,
+    message: 'github account is available'
+  });
 }
 
-async function handleLink(req, res) {
-  if (req.method !== 'POST') {
+async function handleSignup(req, res) {
+  if (req.method !== 'GET') {
     return res.status(405).json({ error: 'method not allowed' });
   }
 
-  // Implement link logic here  
-  return res.status(200).json({ message: 'link endpoint - implement as needed' });
+  const { code } = req.query;
+  
+  if (!code) {
+    return res.status(400).json({ error: 'missing authorization code' });
+  }
+
+  // Exchange code for access token
+  const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      client_id: process.env.GITHUB_CLIENT_ID,
+      client_secret: process.env.GITHUB_CLIENT_SECRET,
+      code: code,
+    }),
+  });
+
+  const tokenData = await tokenResponse.json();
+  
+  if (!tokenData.access_token) {
+    return res.status(400).json({ error: 'failed to get access token' });
+  }
+
+  // Get user data from GitHub
+  const userResponse = await fetch('https://api.github.com/user', {
+    headers: {
+      'Authorization': `token ${tokenData.access_token}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  const githubUser = await userResponse.json();
+  
+  if (!githubUser.id) {
+    return res.status(400).json({ error: 'failed to get GitHub user data' });
+  }
+
+  console.log('🔍 Checking GitHub account:', githubUser.login);
+
+  // Check if this GitHub account is already linked
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+
+  const { data: existingLink } = await supabase
+    .rpc('check_github_account_linkage', {
+      github_user_id: githubUser.id.toString(),
+      github_username: githubUser.login
+    });
+
+  if (existingLink && existingLink.length > 0 && existingLink[0].is_linked) {
+    // GitHub account is already linked - redirect to sign in instead
+    console.log('⚠️ GitHub account already linked to:', existingLink[0].existing_username);
+    
+    const errorUrl = new URL(`${req.headers.origin || 'http://localhost:5173'}`);
+    errorUrl.searchParams.set('auth_error', 'github_already_linked');
+    errorUrl.searchParams.set('existing_user', existingLink[0].existing_username);
+    
+    return res.redirect(302, errorUrl.toString());
+  }
+
+  // GitHub account is not linked, proceed with Supabase GitHub OAuth
+  console.log('✅ GitHub account available, proceeding with signup');
+  
+  // Create a Supabase auth session with GitHub
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'github',
+    options: {
+      redirectTo: `${req.headers.origin || 'http://localhost:5173'}/auth/callback`
+    }
+  });
+
+  if (error) {
+    console.error('Supabase GitHub auth error:', error);
+    const errorUrl = new URL(`${req.headers.origin || 'http://localhost:5173'}`);
+    errorUrl.searchParams.set('auth_error', 'supabase_github_failed');
+    return res.redirect(302, errorUrl.toString());
+  }
+
+  // Redirect to Supabase GitHub OAuth
+  return res.redirect(302, data.url);
 }
