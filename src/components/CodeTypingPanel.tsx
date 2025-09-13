@@ -122,23 +122,36 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snippet]);
 
-  // Auto-focus on component mount and maintain focus
+  // Auto-focus on component mount - immediate for better UX
   useEffect(() => {
-    // Auto-focus after a brief delay to ensure component is mounted
-    setTimeout(() => {
-      if (textareaRef.current && !isComplete) {
+    // Use multiple strategies for immediate focus
+    const focusTextarea = () => {
+      if (textareaRef.current && !isComplete && !isLocked) {
         textareaRef.current.focus();
         setIsFocused(true);
       }
-    }, 100);
+    };
+    
+    // Immediate focus
+    focusTextarea();
+    
+    // Use requestAnimationFrame for post-render focus
+    requestAnimationFrame(focusTextarea);
+    
+    // Minimal fallback delay (reduced from 100ms to 25ms)
+    const timeoutId = setTimeout(focusTextarea, 25);
+    
+    return () => clearTimeout(timeoutId);
   }, []);
 
-  // Maintain focus when component updates
+  // Maintain focus when component updates - more efficient
   useEffect(() => {
-    if (!isComplete && !isLocked) {
-      textareaRef.current?.focus();
+    if (!isComplete && !isLocked && isFocused) {
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
     }
-  }, [snippet, isComplete, isLocked]);
+  }, [snippet, isComplete, isLocked, isFocused]);
 
   // Re-focus when clicking anywhere on the typing area
   const handleContainerClick = () => {
@@ -342,9 +355,34 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
       const capsLockDetected = isUpperCase !== isShiftPressed;
       setIsCapsLockOn(capsLockDetected);
     }
-    // Preserve typing within snippet length and support Tab indentation
+    // Handle Tab key for reset functionality or indentation
     if (e.key === 'Tab') {
       e.preventDefault();
+      
+      // If user hasn't finished typing (not complete), reset without consuming attempt
+      if (hasStarted && !isComplete) {
+        console.log('🔄 Tab pressed - resetting snippet without consuming attempt');
+        setUserInput('');
+        setHasStarted(false);
+        setIsComplete(false);
+        setIsFocused(true);
+        setStartTime(Date.now());
+        setSessionStartTime(Date.now());
+        setKeystrokeCount(0);
+        setFocusEvents({blur: 0, focus: 0});
+        
+        // Refocus the textarea
+        const textarea = textareaRef.current;
+        if (textarea) {
+          requestAnimationFrame(() => {
+            textarea.focus();
+            textarea.setSelectionRange(0, 0);
+          });
+        }
+        return;
+      }
+      
+      // If not started yet, handle tab indentation
       const textarea = textareaRef.current;
       if (!textarea) return;
 
@@ -597,10 +635,13 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
 
   const handleRefresh = () => {
     onRefresh();
-    // Focus after refresh
-    setTimeout(() => {
-      textareaRef.current?.focus();
-    }, 10);
+    // Focus immediately after refresh with requestAnimationFrame
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        setIsFocused(true);
+      }
+    });
   };
 
   // Calculate XP gained for this attempt
@@ -765,8 +806,20 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
               
               {/* Instruction text when not started */}
               {!hasStarted && (
-                <div className="absolute top-2 left-8 text-sm text-zinc-500 dark:text-zinc-400 animate-pulse z-20 pointer-events-none">
-                  start typing to begin the challenge
+                <>
+                  <div className="absolute top-2 left-8 text-sm text-zinc-500 dark:text-zinc-400 animate-pulse z-20 pointer-events-none">
+                    start typing to begin the challenge
+                  </div>
+                  <div className="absolute top-7 left-8 text-xs text-zinc-400 dark:text-zinc-500 opacity-75 z-20 pointer-events-none">
+                    press <kbd className="px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-700 rounded text-xs font-mono">tab</kbd> to reset
+                  </div>
+                </>
+              )}
+              
+              {/* Tab hint when typing */}
+              {hasStarted && !isComplete && (
+                <div className="absolute top-2 right-20 text-xs text-zinc-400 dark:text-zinc-500 opacity-60 z-20 pointer-events-none">
+                  <kbd className="px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-700 rounded text-xs font-mono">tab</kbd> to reset
                 </div>
               )}
               {/* Visual overlay rendered behind the textarea so the caret remains visible */}
