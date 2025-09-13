@@ -410,6 +410,105 @@ node -e "console.log('Test')"
 npm run build
 ```
 
+## Smart Backspace Navigation for Speedtyping
+
+**CRITICAL FOR SPEEDTYPING COMPETITION**: DevTyper implements enhanced backspace navigation that goes beyond standard IDE behavior for competitive advantage.
+
+### Current Implementation (CodeTypingPanel.tsx)
+```javascript
+// Smart backspace for speedtyping - jump to previous line when in indentation
+if (e.key === 'Backspace') {
+  // Detects when user is in leading whitespace (indentation)
+  const isInIndentation = /^\s+$/.test(currentLineText);
+  
+  // If in indentation, delete all whitespace + newline and jump to previous line
+  if (isInIndentation && lastNewlineIndex >= 0) {
+    e.preventDefault();
+    const newValue = userInput.slice(0, lastNewlineIndex) + userInput.slice(cursorPos);
+    setUserInput(newValue);
+    // Position cursor at end of previous line
+    requestAnimationFrame(() => {
+      textarea.setSelectionRange(lastNewlineIndex, lastNewlineIndex);
+    });
+    return;
+  }
+}
+```
+
+### Key Design Decisions & Lessons Learned
+
+**❌ WRONG APPROACHES TRIED**:
+1. **Complex line detection logic**: Calculating line positions, trying to be too clever with multiple navigation scenarios
+2. **Cursor-only movement**: Moving cursor without deleting text caused visual sync issues
+3. **Too many edge cases**: Handling "start of line", "end of indentation", "between lines" separately caused conflicts
+
+**✅ CORRECT APPROACH**:
+- **Simple regex detection**: `^\s+$` to detect "indentation only" text
+- **Single atomic operation**: Delete indentation + newline in one action
+- **Clear trigger condition**: Only activate when user is clearly in unwanted indentation
+- **Preserve normal behavior**: Don't interfere with regular character deletion
+
+### Critical Implementation Notes
+
+**Why This Feature is Essential:**
+- Standard IDE backspace goes character-by-character through indentation
+- In speedtyping competitions, backspacing through 8+ spaces is time-wasting
+- Users need instant "jump to previous line" when they realize they're on wrong line
+- Eliminates tedious "backspace spam" through whitespace they never consciously typed
+
+**Visual Sync Requirements:**
+- Must use `setUserInput()` to update React state (not just cursor movement)
+- `requestAnimationFrame()` ensures cursor positioning happens after state update
+- Prevents red highlighting from getting out of sync with actual cursor position
+
+**User Experience Priority:**
+- Feature must feel instant and predictable
+- Should never interfere with intentional character deletion
+- Must work consistently across all typing scenarios
+
+### Database Cleanup Procedures
+
+When users have corrupted data from pre-security-patch sessions:
+
+```javascript
+// Example: Remove impossible WPM scores
+const { error } = await supabase
+  .from('attempts')
+  .delete()
+  .eq('id', 'attempt-id')
+  .eq('wpm', impossibleScore); // Safety check
+
+// Always verify cleanup
+const { data: cleanAttempts } = await supabase
+  .from('attempts')
+  .select('wpm, accuracy, created_at')
+  .eq('user_id', userId)
+  .order('wpm', { ascending: false });
+```
+
+**Admin Cleanup Patterns:**
+- Use service role key for admin operations: `SUPABASE_SERVICE_ROLE_KEY`
+- Always add safety checks (`.eq('wpm', expectedBuggedValue)`)
+- Verify cleanup by checking remaining top scores
+- Calculate corrected averages after cleanup
+
+### Common Pitfalls in Typing UX
+
+**Keyboard Event Handling:**
+- `e.preventDefault()` is essential when overriding default behavior
+- `requestAnimationFrame()` for cursor positioning after React state updates
+- Never modify cursor position without corresponding state changes
+
+**State Synchronization:**
+- Visual overlay must stay in sync with textarea state
+- Cursor position changes must happen after `setUserInput()` completes
+- Use textarea ref for precise cursor control
+
+**User Expectations:**
+- Speedtypers expect immediate feedback and instant navigation
+- Any delay or "dead key" presses break flow and hurt performance
+- Feature should feel invisible when working correctly
+
 ---
 
-**Remember**: This is a typing practice app focused on clean UI, accurate stats, and user customization. Keep everything simple, fast, and lowercase!
+**Remember**: This is a typing practice app focused on clean UI, accurate stats, and user customization. Keep everything simple, fast, and lowercase! The smart backspace feature is critical for competitive advantage in speedtyping.

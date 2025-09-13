@@ -195,6 +195,38 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'failed to store attempt' });
     }
 
+    console.log('✅ Attempt stored successfully:', data.id);
+
+    // 🏆 ACHIEVEMENTS: Check and award achievements for this attempt
+    let newAchievements = [];
+    try {
+      const { data: achievementCount, error: achievementError } = await supabase
+        .rpc('check_and_award_achievements', {
+          p_user_id: user.id,
+          p_wpm: sanitized.wpm,
+          p_accuracy: sanitized.accuracy,
+          p_attempt_id: data.id
+        });
+
+      if (achievementError) {
+        console.error('Achievement check error:', achievementError);
+      } else if (achievementCount > 0) {
+        console.log(`🎉 ${achievementCount} new achievements unlocked for user ${user.id}!`);
+        
+        // Fetch the newly earned achievements for the response
+        const { data: userAchievements } = await supabase
+          .rpc('get_user_achievements', { p_user_id: user.id });
+        
+        // Get only the most recent achievements (up to the count we just awarded)
+        newAchievements = (userAchievements || [])
+          .sort((a, b) => new Date(b.earned_at) - new Date(a.earned_at))
+          .slice(0, achievementCount);
+      }
+    } catch (achievementErr) {
+      console.error('Achievement system error:', achievementErr);
+      // Don't fail the entire request if achievements fail
+    }
+
     // 🛡️ SECURITY: Calculate XP from sanitized, server-verified values
     let xpEarned = 0;
     try {
@@ -239,7 +271,8 @@ export default async function handler(req, res) {
     return res.status(200).json({ 
       success: true, 
       attempt_id: data.id,
-      xp_earned: xpEarned 
+      xp_earned: xpEarned,
+      achievements: newAchievements // Include any newly earned achievements
     });
   } catch (err) {
     console.error('Attempt handler error:', err);

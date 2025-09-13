@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Trophy, Zap, Target, Crown, Star, Gem, Camera, CheckCircle2, XCircle, UserPlus, UserMinus, Users, Edit2, Check, X, Github, ExternalLink } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { AchievementPanel } from './AchievementPanel';
 
 interface Profile {
   id: string;
@@ -1062,6 +1063,16 @@ export const Profile: React.FC = () => {
             )}
           </div>
         )}
+      </div>
+
+      {/* Achievements Section */}
+      <div className="bg-white/90 dark:bg-zinc-900/60 backdrop-blur-sm rounded-2xl border border-zinc-300 dark:border-zinc-800 p-6 shadow-lg">
+        <AchievementPanel 
+          userId={displayProfile?.id}
+          currentWpm={displayStats?.avg_wpm || 0}
+          showProgress={true}
+          maxDisplay={12}
+        />
       </div>
 
       {/* Friends & Requests - Only show for own profile */}

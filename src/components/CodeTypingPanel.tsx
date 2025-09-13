@@ -4,6 +4,7 @@ import { GetStartedButton } from '@/components/ui/get-started-button';
 import { LeaderboardModal } from '@/components/ui/leaderboard-modal';
 import { LanguageFilterDropdown } from '@/components/ui/language-filter-dropdown';
 import GlassAuthModal from '@/components/ui/auth-model';
+import { AchievementNotification } from '@/components/ui/achievement-notification';
 import { supabase } from '@/lib/supabase';
 
 interface CodeTypingPanelProps {
@@ -36,6 +37,8 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [xpGained, setXpGained] = useState<number | null>(null);
   const [showXpMessage, setShowXpMessage] = useState(false);
+  const [newAchievements, setNewAchievements] = useState<any[]>([]);
+  const [showAchievements, setShowAchievements] = useState(false);
   
   // 🛡️ SECURITY: Anti-cheat tracking
   const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
@@ -652,6 +655,13 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         
         const result = await response.json();
         console.log('Attempt response:', result);
+
+        // 🏆 Show achievements if any were earned
+        if (response.ok && result.achievements && result.achievements.length > 0) {
+          console.log('🎉 New achievements earned:', result.achievements);
+          setNewAchievements(result.achievements);
+          setShowAchievements(true);
+        }
         
         // Refresh attempts remaining for daily mode after successful submission
         if (response.ok && isDailyMode && isLoggedIn) {
@@ -933,6 +943,19 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         onLogin={() => setAuthOpen(false)}
         onSignup={() => setAuthOpen(false)}
       />
+
+      {/* Achievement Notification */}
+      {showAchievements && newAchievements.length > 0 && (
+        <AchievementNotification
+          achievements={newAchievements}
+          onClose={() => {
+            setShowAchievements(false);
+            setNewAchievements([]);
+          }}
+          autoClose={true}
+          autoCloseDelay={8000}
+        />
+      )}
     </div>
   );
 };

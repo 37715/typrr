@@ -1,3 +1,22 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+dist-ssr
+build
+.output
+.vercel
+
+# Environment files (CRITICAL: Never commit these)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
 # Logs
 logs
 *.log
@@ -7,10 +26,33 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Security sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+*.cert
+*.crt
+config/secrets.json
+secrets/
+.secrets
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# API keys and secrets
+api-keys.json
+secrets.yaml
+credentials.json
+
+# Temporary files
+tmp/
+temp/
+.tmp
+*.tmp
+nul
 
 # Editor directories and files
 .vscode/*
@@ -22,8 +64,21 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.env
 
-.vercel
-.env*.local
-nul
+# OS files
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Development tools
+.claude/
+debug-*.js
+test-api.js
+
+# Scripts that contain sensitive data
+scripts/fix-*-snippets.js
+scripts/add-*-snippets.js
+scripts/perfect-snippets.js
+scripts/ultra-*.js
+scripts/final-*.js
