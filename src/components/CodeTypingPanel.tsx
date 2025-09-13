@@ -789,7 +789,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
             {/* Line Numbers */}
             <div className="select-none px-6 py-8 bg-zinc-100 dark:bg-zinc-800/30 border-r border-zinc-200 dark:border-zinc-800 normal-case transition-colors duration-300">
               {snippetLines.map((_, index) => (
-                <div key={index} className="text-zinc-500 text-base font-mono leading-7">
+                <div key={index} className="text-zinc-500 text-base font-mono code-snippet leading-7">
                   {index + 1}
                 </div>
               ))}
@@ -799,7 +799,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
             <div className="flex-1 relative">
               {/* Language indicator - subtle and positioned in top-right */}
               {language && (
-                <div className="absolute top-3 right-4 text-xs font-mono text-zinc-400 dark:text-zinc-500 opacity-60 z-20 pointer-events-none lowercase">
+                <div className="absolute top-3 right-4 text-xs font-mono code-snippet text-zinc-400 dark:text-zinc-500 opacity-60 z-20 pointer-events-none lowercase">
                   {language}
                 </div>
               )}
@@ -811,7 +811,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
                 </div>
               )}
               {/* Visual overlay rendered behind the textarea so the caret remains visible */}
-              <div className="absolute inset-0 p-8 font-mono no-liga text-lg leading-7 pointer-events-none z-0 whitespace-pre-wrap normal-case">
+              <div className="absolute inset-0 p-8 font-mono code-snippet no-liga text-lg leading-7 pointer-events-none z-0 whitespace-pre-wrap normal-case">
                 {snippet.split('').map((char, index) => renderCharacter(char, index))}
               </div>
               
@@ -852,7 +852,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
                   // 🛡️ SECURITY: Track blur events for anti-cheat
                   setFocusEvents(prev => ({...prev, blur: prev.blur + 1}));
                 }}
-                className="relative z-10 w-full h-full p-8 bg-transparent text-transparent font-mono no-liga text-lg leading-7 resize-none outline-none caret-transparent selection:bg-green-500/30 normal-case"
+                className="relative z-10 w-full h-full p-8 bg-transparent text-transparent font-mono code-snippet no-liga text-lg leading-7 resize-none outline-none caret-transparent selection:bg-green-500/30 normal-case"
                 style={{ 
                   caretColor: 'transparent',
                   minHeight: `${snippetLines.length * 1.9 + 6}rem`

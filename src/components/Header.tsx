@@ -1,19 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { Trophy, User } from 'lucide-react';
+import { Trophy, User, Settings } from 'lucide-react';
 import GlassAuthModal from '@/components/ui/auth-model';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { LeaderboardModal } from '@/components/ui/leaderboard-modal';
+import { SettingsModal } from '@/components/ui/settings-modal';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/toast';
+import { useFontSettings } from '@/hooks/useFontSettings';
 
 export const Header: React.FC = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [dailyData, setDailyData] = useState([]);
   const [trickyData, setTrickyData] = useState([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const toast = useToast();
+  const { fontFamily, changeFontFamily } = useFontSettings();
 
   const fetchLeaderboard = async () => {
     setLoadingLeaderboard(true);
@@ -94,6 +98,13 @@ export const Header: React.FC = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-3 items-center h-16">
           <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="p-2 text-zinc-500 rounded-lg transition-colors duration-200 hover:bg-black hover:text-white dark:text-zinc-400 dark:hover:bg-white dark:hover:text-zinc-900"
+              aria-label="settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
             <div className="w-8 h-8 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center transition-colors duration-300">
               <span className="text-white dark:text-zinc-900 font-bold text-sm">tr</span>
             </div>
@@ -145,6 +156,12 @@ export const Header: React.FC = () => {
               onOpenChange={setLbOpen} 
               daily={window.location.pathname.includes('tricky-chars') ? trickyData : dailyData}
               loading={loadingLeaderboard}
+            />
+            <SettingsModal
+              open={settingsOpen}
+              onOpenChange={setSettingsOpen}
+              fontFamily={fontFamily}
+              onFontChange={changeFontFamily}
             />
           </div>
         </div>

@@ -28,7 +28,8 @@ export default async function handler(req, res) {
     // Get language filter from query params
     const { language } = req.query;
     
-    // Build query for random practice snippet
+    // Use database-level randomization for true random selection
+    // This ensures different results even with same language selection
     let query = supabase
       .from('snippets')
       .select('id, language, content')
@@ -39,16 +40,19 @@ export default async function handler(req, res) {
       query = query.eq('language', language);
     }
     
-    const { data, error } = await query.limit(50);
+    // Use PostgreSQL's random() for database-level randomization
+    // This ensures each API call gets different snippets even for the same language
+    const { data, error } = await query
+      .order('random()', { ascending: false })
+      .limit(1);
     
     if (error) throw error;
     if (!data || data.length === 0) {
       return res.status(404).json({ error: 'no practice snippets' });
     }
     
-    // Pick a random snippet
-    const pick = data[Math.floor(Math.random() * data.length)];
-    return res.status(200).json({ snippet: pick });
+    // Return the randomly selected snippet
+    return res.status(200).json({ snippet: data[0] });
     
   } catch (err) {
     console.error('Practice API error:', err);
