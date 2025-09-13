@@ -31,10 +31,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Ensure code snippets always use monospace font regardless of global setting */
-pre, code, .font-mono, .code-snippet {
-  font-family: var(--font-family-code) !important;
-  font-weight: 400 !important;
+/* ALL elements use the variable font - including code */
+* {
+  font-family: var(--font-family-base) !important;
+  font-weight: var(--font-weight-base) !important;
 }
 
 .light {

@@ -766,10 +766,10 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
         {/* centered WPM and Accuracy header with mode badge */}
         <div className="relative flex items-center justify-center px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-950/60 transition-colors duration-300">
           <div className="flex items-center gap-8">
-            <div className="text-2xl font-mono text-zinc-900 dark:text-white">
+            <div className="text-2xl text-zinc-900 dark:text-white">
               {isComplete ? wpm.toFixed(0) : Math.max(0, Math.floor(wpm)).toString()} wpm
             </div>
-            <div className="text-2xl font-mono text-zinc-900 dark:text-white">
+            <div className="text-2xl text-zinc-900 dark:text-white">
               {accuracy !== null ? `${accuracy.toFixed(0)}% acc` : '- acc'}
             </div>
           </div>
@@ -789,7 +789,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
             {/* Line Numbers */}
             <div className="select-none px-6 py-8 bg-zinc-100 dark:bg-zinc-800/30 border-r border-zinc-200 dark:border-zinc-800 normal-case transition-colors duration-300">
               {snippetLines.map((_, index) => (
-                <div key={index} className="text-zinc-500 text-base font-mono code-snippet leading-7">
+                <div key={index} className="text-zinc-500 text-base leading-7">
                   {index + 1}
                 </div>
               ))}
@@ -799,7 +799,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
             <div className="flex-1 relative">
               {/* Language indicator - subtle and positioned in top-right */}
               {language && (
-                <div className="absolute top-3 right-4 text-xs font-mono code-snippet text-zinc-400 dark:text-zinc-500 opacity-60 z-20 pointer-events-none lowercase">
+                <div className="absolute top-3 right-4 text-xs text-zinc-400 dark:text-zinc-500 opacity-60 z-20 pointer-events-none lowercase">
                   {language}
                 </div>
               )}
@@ -811,7 +811,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
                 </div>
               )}
               {/* Visual overlay rendered behind the textarea so the caret remains visible */}
-              <div className="absolute inset-0 p-8 font-mono code-snippet no-liga text-lg leading-7 pointer-events-none z-0 whitespace-pre-wrap normal-case">
+              <div className="absolute inset-0 p-8 no-liga text-lg leading-7 pointer-events-none z-0 whitespace-pre-wrap normal-case">
                 {snippet.split('').map((char, index) => renderCharacter(char, index))}
               </div>
               
@@ -829,7 +829,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
               {isCapsLockOn && hasStarted && !isComplete && (
                 <div className="absolute top-3 left-4 z-20 pointer-events-none animate-in fade-in duration-300">
                   <div className="bg-zinc-50 dark:bg-zinc-900/90 backdrop-blur-sm border border-zinc-300 dark:border-zinc-700 rounded-md px-2 py-1 shadow-sm">
-                    <span className="text-xs font-mono text-zinc-600 dark:text-zinc-400 lowercase">caps lock</span>
+                    <span className="text-xs text-zinc-600 dark:text-zinc-400 lowercase">caps lock</span>
                   </div>
                 </div>
               )}
@@ -852,7 +852,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
                   // 🛡️ SECURITY: Track blur events for anti-cheat
                   setFocusEvents(prev => ({...prev, blur: prev.blur + 1}));
                 }}
-                className="relative z-10 w-full h-full p-8 bg-transparent text-transparent font-mono code-snippet no-liga text-lg leading-7 resize-none outline-none caret-transparent selection:bg-green-500/30 normal-case"
+                className="relative z-10 w-full h-full p-8 bg-transparent text-transparent no-liga text-lg leading-7 resize-none outline-none caret-transparent selection:bg-green-500/30 normal-case"
                 style={{ 
                   caretColor: 'transparent',
                   minHeight: `${snippetLines.length * 1.9 + 6}rem`
@@ -892,7 +892,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
           <div className="flex items-center gap-2 px-3 py-2 bg-zinc-100/80 dark:bg-zinc-800/80 backdrop-blur-sm rounded-lg border border-zinc-200 dark:border-zinc-700 animate-pulse" 
                style={{ animationDuration: '2s' }}>
             <span className="text-xs text-zinc-500 dark:text-zinc-400">press</span>
-            <kbd className="px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded text-xs font-mono shadow-sm">tab</kbd>
+            <kbd className="px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded text-xs shadow-sm">tab</kbd>
             <span className="text-xs text-zinc-500 dark:text-zinc-400">to reset</span>
           </div>
         </div>

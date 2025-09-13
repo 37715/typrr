@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
 interface DialogProps {
@@ -10,9 +11,9 @@ interface DialogProps {
 export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) => {
   if (!open) return null;
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       onClick={() => onOpenChange(false)}
     >
       {/* Backdrop */}
@@ -27,6 +28,8 @@ export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) 
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 interface DialogContentProps {

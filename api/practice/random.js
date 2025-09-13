@@ -40,19 +40,17 @@ export default async function handler(req, res) {
       query = query.eq('language', language);
     }
     
-    // Use PostgreSQL's random() for database-level randomization
-    // This ensures each API call gets different snippets even for the same language
-    const { data, error } = await query
-      .order('random()', { ascending: false })
-      .limit(1);
+    // Get all matching snippets and select one randomly
+    const { data, error } = await query;
     
     if (error) throw error;
     if (!data || data.length === 0) {
       return res.status(404).json({ error: 'no practice snippets' });
     }
     
-    // Return the randomly selected snippet
-    return res.status(200).json({ snippet: data[0] });
+    // Pick a random snippet
+    const randomIndex = Math.floor(Math.random() * data.length);
+    return res.status(200).json({ snippet: data[randomIndex] });
     
   } catch (err) {
     console.error('Practice API error:', err);
