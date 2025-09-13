@@ -806,20 +806,8 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
               
               {/* Instruction text when not started */}
               {!hasStarted && (
-                <>
-                  <div className="absolute top-2 left-8 text-sm text-zinc-500 dark:text-zinc-400 animate-pulse z-20 pointer-events-none">
-                    start typing to begin the challenge
-                  </div>
-                  <div className="absolute top-7 left-8 text-xs text-zinc-400 dark:text-zinc-500 opacity-75 z-20 pointer-events-none">
-                    press <kbd className="px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-700 rounded text-xs font-mono">tab</kbd> to reset
-                  </div>
-                </>
-              )}
-              
-              {/* Tab hint when typing */}
-              {hasStarted && !isComplete && (
-                <div className="absolute top-2 right-20 text-xs text-zinc-400 dark:text-zinc-500 opacity-60 z-20 pointer-events-none">
-                  <kbd className="px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-700 rounded text-xs font-mono">tab</kbd> to reset
+                <div className="absolute top-2 left-8 text-sm text-zinc-500 dark:text-zinc-400 animate-pulse z-20 pointer-events-none">
+                  start typing to begin the challenge
                 </div>
               )}
               {/* Visual overlay rendered behind the textarea so the caret remains visible */}
@@ -897,6 +885,18 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
           />
         </div>
       </div>
+
+      {/* Tab hint - Outside the typing box, always visible when not complete */}
+      {!isComplete && (
+        <div className="flex justify-center mt-4">
+          <div className="flex items-center gap-2 px-3 py-2 bg-zinc-100/80 dark:bg-zinc-800/80 backdrop-blur-sm rounded-lg border border-zinc-200 dark:border-zinc-700 animate-pulse" 
+               style={{ animationDuration: '2s' }}>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">press</span>
+            <kbd className="px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded text-xs font-mono shadow-sm">tab</kbd>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">to reset</span>
+          </div>
+        </div>
+      )}
 
       {/* controls */}
       <div className="mt-8 flex flex-col items-center gap-4">
