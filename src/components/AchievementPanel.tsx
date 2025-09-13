@@ -88,7 +88,9 @@ export const AchievementPanel: React.FC<AchievementPanelProps> = ({
     }
   };
 
-  const unlockedAchievements = achievements.slice(0, maxDisplay);
+  // Sort achievements by requirement_value (lowest to highest) for proper left-to-right order
+  const sortedAchievements = achievements.sort((a, b) => a.requirement_value - b.requirement_value);
+  const unlockedAchievements = sortedAchievements.slice(0, maxDisplay);
   const nextAchievements = progress
     .filter(p => !p.is_unlocked)
     .slice(0, 3); // Show next 3 to unlock

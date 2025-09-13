@@ -142,7 +142,7 @@ BEGIN
   FROM user_achievements ua
   JOIN achievement_types at ON ua.achievement_id = at.id
   WHERE ua.user_id = p_user_id
-  ORDER BY at.category, at.requirement_value DESC;
+  ORDER BY at.category, at.requirement_value ASC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

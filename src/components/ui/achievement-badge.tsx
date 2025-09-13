@@ -39,11 +39,24 @@ const iconMap = {
 };
 
 const rarityStyles = {
-  common: 'ring-gray-300 shadow-gray-200',
-  rare: 'ring-blue-300 shadow-blue-200',
-  epic: 'ring-purple-300 shadow-purple-200', 
-  legendary: 'ring-orange-300 shadow-orange-200 animate-pulse',
-  mythical: 'ring-pink-300 shadow-pink-200 animate-pulse shadow-lg'
+  common: 'ring-gray-500 shadow-gray-400 ring-2',
+  rare: 'ring-blue-500 shadow-blue-400 ring-2',
+  epic: 'ring-purple-500 shadow-purple-400 ring-2', 
+  legendary: 'ring-orange-500 shadow-orange-400 animate-pulse ring-4',
+  mythical: 'ring-pink-500 shadow-pink-400 animate-pulse shadow-lg ring-4'
+};
+
+// Create vibrant, visible backgrounds for each rarity
+const getVibrantBackground = (rarity: string, badgeGradient: string) => {
+  const vibrantBackgrounds = {
+    common: 'linear-gradient(135deg, #6b7280, #9ca3af)', // Gray
+    rare: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', // Blue to Purple  
+    epic: 'linear-gradient(135deg, #8b5cf6, #ec4899)', // Purple to Pink
+    legendary: 'linear-gradient(135deg, #f97316, #ef4444)', // Orange to Red
+    mythical: 'linear-gradient(135deg, #ec4899, #8b5cf6, #06b6d4)', // Pink to Purple to Cyan
+  };
+  
+  return vibrantBackgrounds[rarity as keyof typeof vibrantBackgrounds] || vibrantBackgrounds.common;
 };
 
 export const AchievementBadge: React.FC<AchievementBadgeProps> = ({
@@ -76,7 +89,9 @@ export const AchievementBadge: React.FC<AchievementBadgeProps> = ({
           'hover:scale-110 cursor-pointer'
         )}
         style={{
-          background: isLocked ? '#374151' : `linear-gradient(135deg, ${achievement.badge_gradient.replace('from-', '').replace('to-', '').replace('via-', '')})`
+          background: isLocked 
+            ? '#374151' 
+            : getVibrantBackground(achievement.rarity, achievement.badge_gradient)
         }}
       >
         <IconComponent 
