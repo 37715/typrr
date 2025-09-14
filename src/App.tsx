@@ -10,6 +10,7 @@ import { TrickyChars } from './components/TrickyChars';
 import { AuthCallback } from './components/AuthCallback';
 import CharacterStats from './components/stats/CharacterStats';
 import { DonationSection } from './components/ui/donation-section';
+import { DiscordInvitation } from './components/ui/discord-invitation';
 import { DonationSuccess } from './components/DonationSuccess';
 
 function App() {
@@ -237,6 +238,11 @@ function App() {
                     <CharacterStats refreshTrigger={statsRefreshTrigger} />
                   </div>
                 )}
+                
+                {/* Discord Invitation - appears at the bottom */}
+                <div className="mt-12">
+                  <DiscordInvitation />
+                </div>
               </>
             } />
             <Route path="/tricky-chars" element={

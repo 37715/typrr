@@ -3,6 +3,7 @@ import { RefreshCw, Trophy, Hash } from 'lucide-react';
 import { GetStartedButton } from '@/components/ui/get-started-button';
 import { LeaderboardModal } from '@/components/ui/leaderboard-modal';
 import GlassAuthModal from '@/components/ui/auth-model';
+import { DiscordInvitation } from '@/components/ui/discord-invitation';
 import { supabase } from '@/lib/supabase';
 
 interface TrickyCharsProps {
@@ -423,6 +424,11 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
           )}
         </div>
       )}
+
+      {/* Discord Invitation */}
+      <div className="mt-8">
+        <DiscordInvitation />
+      </div>
 
       <LeaderboardModal 
         open={lbOpen} 
