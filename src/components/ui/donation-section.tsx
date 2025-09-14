@@ -114,7 +114,19 @@ export const DonationSection: React.FC = () => {
       observer.observe(sectionRef.current);
     }
 
-    return () => observer.disconnect();
+    // Listen for custom event to open donation modal
+    const handleOpenDonationModal = () => {
+      setShowModal(true);
+      setIsModalOpening(true);
+      setTimeout(() => setIsModalOpening(false), 100);
+    };
+
+    window.addEventListener('openDonationModal', handleOpenDonationModal);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('openDonationModal', handleOpenDonationModal);
+    };
   }, []);
 
   return (
@@ -137,6 +149,7 @@ export const DonationSection: React.FC = () => {
       {/* Animated Donate Button */}
       <div className="flex justify-center mb-8">
         <button
+          data-donate-button
           onClick={() => {
             setShowModal(true);
             setIsModalOpening(true);
