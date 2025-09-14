@@ -9,6 +9,8 @@ import { Profile } from './components/Profile';
 import { TrickyChars } from './components/TrickyChars';
 import { AuthCallback } from './components/AuthCallback';
 import CharacterStats from './components/stats/CharacterStats';
+import { DonationSection } from './components/ui/donation-section';
+import { DonationSuccess } from './components/DonationSuccess';
 
 function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -151,7 +153,7 @@ function App() {
       <Header />
       
       <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-        <div className="w-full space-y-8">
+        <div className="w-full">
           <Routes>
             <Route path="/daily" element={
               <>
@@ -185,6 +187,11 @@ function App() {
                     <CharacterStats refreshTrigger={statsRefreshTrigger} />
                   </div>
                 )}
+                
+                {/* Donation Section - appears below leaderboard */}
+                <div className="mt-12">
+                  <DonationSection />
+                </div>
               </>
             } />
             <Route path="/practice" element={
@@ -243,6 +250,7 @@ function App() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/:username" element={<Profile />} />
+            <Route path="/donation-success" element={<DonationSuccess />} />
             <Route path="*" element={<Navigate to="/daily" replace />} />
           </Routes>
         </div>
