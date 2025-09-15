@@ -144,12 +144,12 @@ async function handleDailyLeaderboard(supabase, res) {
 async function handleTrickyCharsLeaderboard(supabase, res) {
   console.log('📊 Tricky chars leaderboard API endpoint hit!');
   
-  // Get all tricky chars attempts (mode = 'tricky_chars' with special placeholder snippet_id)
+  // Get all tricky chars attempts (mode = 'tricky_chars' with null snippet_id)
   const { data: attempts, error: attemptsError } = await supabase
     .from('attempts')
     .select('user_id, wpm, accuracy, elapsed_ms, created_at')
     .eq('mode', 'tricky_chars')
-    .eq('snippet_id', '4785fbf4-d7a9-422a-8384-1d8ac804fd2d');
+    .is('snippet_id', null);
   
   if (attemptsError) {
     console.error('Error fetching tricky chars attempts:', attemptsError);

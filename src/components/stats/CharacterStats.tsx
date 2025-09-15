@@ -114,22 +114,29 @@ export default function CharacterStats({ refreshTrigger }: CharacterStatsProps) 
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div className="p-6">
-            {/* Development Notice */}
-            <div className="mb-4 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                <span className="text-sm text-amber-800 dark:text-amber-200 font-medium">
-                  still in development
-                </span>
+            {/* Coming Soon Notice */}
+            <div className="mb-4 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border border-blue-200 dark:border-blue-700/50">
+              <div className="flex items-center justify-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">✨</span>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                    coming soon
+                  </div>
+                  <div className="text-xs text-blue-600 dark:text-blue-300">
+                    advanced analytics in development
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-center">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                   <BarChart3 className="w-6 h-6 text-white" />
                 </div>
-                <div>
+                <div className="text-center">
                   <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
                     character analytics
                   </h2>
@@ -137,12 +144,14 @@ export default function CharacterStats({ refreshTrigger }: CharacterStatsProps) 
                     click to view detailed typing insights
                   </p>
                 </div>
+                <div className="w-12 flex justify-center">
+                  {isExpanded ? (
+                    <ChevronUp className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+                  )}
+                </div>
               </div>
-              {isExpanded ? (
-                <ChevronUp className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
-              )}
             </div>
           </div>
 
@@ -255,26 +264,33 @@ export default function CharacterStats({ refreshTrigger }: CharacterStatsProps) 
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="p-6">
-          {/* Development Notice */}
-          <div className="mb-4 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-              <span className="text-sm text-amber-800 dark:text-amber-200 font-medium">
-                still in development
-              </span>
+          {/* Coming Soon Notice */}
+          <div className="mb-4 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border border-blue-200 dark:border-blue-700/50">
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs font-bold">✨</span>
+              </div>
+              <div className="text-center">
+                <div className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                  coming soon
+                </div>
+                <div className="text-xs text-blue-600 dark:text-blue-300">
+                  advanced analytics in development
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-center">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
-              <div>
+              <div className="text-center">
                 <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
                   character analytics
                 </h2>
-                <div className="flex items-center gap-4 text-sm text-zinc-600 dark:text-zinc-400">
+                <div className="flex items-center justify-center gap-4 text-sm text-zinc-600 dark:text-zinc-400">
                   <span>click to {isExpanded ? 'hide' : 'view'} detailed insights</span>
                   {statsData.summary.total_characters_analyzed > 0 && (
                     <>
@@ -292,12 +308,14 @@ export default function CharacterStats({ refreshTrigger }: CharacterStatsProps) 
                   )}
                 </div>
               </div>
+              <div className="w-12 flex justify-center">
+                {isExpanded ? (
+                  <ChevronUp className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+                )}
+              </div>
             </div>
-            {isExpanded ? (
-              <ChevronUp className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
-            )}
           </div>
         </div>
 

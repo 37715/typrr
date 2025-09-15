@@ -13,8 +13,13 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   useEffect(() => {
     // on mount, restore persisted theme
     const stored = localStorage.getItem('typrr_theme');
-    if (stored === 'light') setIsDark(false);
-    if (stored === 'dark') setIsDark(true);
+    if (stored) {
+      setIsDark(stored === 'dark');
+    } else {
+      // Default to system preference if no stored theme
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setIsDark(prefersDark);
+    }
   }, []);
 
   useEffect(() => {

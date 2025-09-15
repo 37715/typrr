@@ -207,6 +207,9 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
           
           // Hide XP message after 4 seconds
           setTimeout(() => setShowXpMessage(false), 4000);
+          
+          // Refresh leaderboard data to show updated rankings
+          fetchTrickyLeaderboard();
         }
       } catch (error) {
         console.error('Error submitting tricky chars attempt:', error);
