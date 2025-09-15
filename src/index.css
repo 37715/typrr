@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Force rebuild timestamp: 2025-01-15-11:45 */
+
 /* Force settings modal sizing - cache busting v2.2 */
 .settings-modal-v2,
 .settings-modal-v2-forced {

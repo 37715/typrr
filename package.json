@@ -7,7 +7,7 @@
     "dev": "vite --host",
     "dev:api": "node dev-server.js",
     "dev:vercel": "vercel dev --listen 3001",
-    "build": "vite build --force",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
