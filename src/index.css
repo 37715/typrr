@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Force settings modal sizing - cache busting v2.2 */
+.settings-modal-v2,
+.settings-modal-v2-forced {
+  width: 1080px !important;
+  max-width: 92vw !important;
+  height: 720px !important;
+  max-height: 87vh !important;
+  min-width: 1080px !important;
+  min-height: 720px !important;
+}
+
+/* Additional force for dialog content */
+[data-radix-dialog-content].settings-modal-v2-forced {
+  width: 1080px !important;
+  height: 720px !important;
+}
+
 :root {
   --background: 255 255 255;
   --foreground: 17 24 39;

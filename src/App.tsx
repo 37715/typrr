@@ -105,16 +105,22 @@ function App() {
         
         if (response.ok) {
           const data = await response.json();
-          console.log('🔍 Received snippet:', data.snippet?.language, 'ID:', data.snippet?.id);
+          console.log('🔍 Received snippet data:', JSON.stringify(data, null, 2));
           
           // Check if snippet and content exist before processing
-          if (data.snippet && data.snippet.content) {
+          if (data.snippet && typeof data.snippet.content === 'string') {
+            console.log('✅ Snippet content is valid, normalizing...');
             const normalizedContent = normalizeSnippetContent(data.snippet.content);
             setSnippetContent(normalizedContent);
             setSnippetId(data.snippet.id);
             setSnippetLanguage(data.snippet.language);
           } else {
-            console.error('❌ Snippet data is incomplete:', data);
+            console.error('❌ Snippet data is incomplete or invalid:', {
+              hasSnippet: !!data.snippet,
+              contentType: typeof data.snippet?.content,
+              content: data.snippet?.content,
+              fullData: data
+            });
             setApiError('Received incomplete snippet data from server');
           }
         } else {
