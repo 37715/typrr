@@ -979,7 +979,7 @@ export const CodeTypingPanel: React.FC<CodeTypingPanelProps> = ({
             <div className="mt-4 animate-in slide-in-from-bottom-2 duration-700">
               <button
                 onClick={onRefresh}
-                className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg border lowercase font-medium transition-colors duration-200 bg-zinc-50 text-zinc-900 border-zinc-200 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
+                className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg border lowercase font-medium transition-colors duration-200 bg-zinc-100 text-zinc-900 border-zinc-300 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
               >
                 <span>try again</span>
                 <span className="text-xs opacity-60">({attemptsRemaining} left)</span>

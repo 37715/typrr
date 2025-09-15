@@ -8,17 +8,25 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ className }: ThemeToggleProps) {
-  const [isDark, setIsDark] = useState(true);
+  // Initialize with the current theme from localStorage or system preference
+  const [isDark, setIsDark] = useState(() => {
+    try {
+      const stored = localStorage.getItem('typrr_theme');
+      if (stored) {
+        return stored === 'dark';
+      }
+      // Default to system preference if no stored theme
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } catch (e) {
+      return true; // fallback to dark mode
+    }
+  });
 
   useEffect(() => {
-    // on mount, restore persisted theme
+    // Sync with any changes that might have happened
     const stored = localStorage.getItem('typrr_theme');
-    if (stored) {
+    if (stored && (stored === 'dark') !== isDark) {
       setIsDark(stored === 'dark');
-    } else {
-      // Default to system preference if no stored theme
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setIsDark(prefersDark);
     }
   }, []);
 

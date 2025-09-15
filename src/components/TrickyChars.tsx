@@ -371,7 +371,7 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
           <div className="flex items-center space-x-3">
             <button
               onClick={handleRefresh}
-              className="group relative overflow-hidden rounded-xl border border-zinc-300 bg-zinc-800 text-white hover:bg-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 px-8 py-3 text-sm font-medium"
+              className="group relative overflow-hidden rounded-xl border border-zinc-300 bg-zinc-900 text-white hover:bg-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 px-8 py-3 text-sm font-medium"
             >
               <span className="mr-8 transition-opacity duration-500 group-hover:opacity-0">
                 new sequence
@@ -382,7 +382,7 @@ export const TrickyChars: React.FC<TrickyCharsProps> = ({
             </button>
             <button
               onClick={handleLeaderboardOpen}
-              className="group relative overflow-hidden rounded-xl border border-zinc-300 bg-zinc-800 text-white hover:bg-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 px-8 py-3 text-sm font-medium"
+              className="group relative overflow-hidden rounded-xl border border-zinc-300 bg-zinc-900 text-white hover:bg-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 px-8 py-3 text-sm font-medium"
             >
               <span className="mr-8 transition-opacity duration-500 group-hover:opacity-0">
                 leaderboard
