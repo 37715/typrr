@@ -53,15 +53,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     switch (activeTab) {
       case 'general':
         return (
-          <div className="space-y-10">
-            <div className="space-y-4">
+          <div className="space-y-12">
+            <div className="space-y-6">
               <div className="flex items-center space-x-4">
-                <Type className="w-6 h-6 text-zinc-600 dark:text-zinc-400" />
-                <h3 className="text-xl font-semibold text-zinc-900 dark:text-white lowercase">
+                <Type className="w-7 h-7 text-zinc-600 dark:text-zinc-400" />
+                <h3 className="text-2xl font-semibold text-zinc-900 dark:text-white lowercase">
                   font family
                 </h3>
               </div>
-              <p className="text-zinc-600 dark:text-zinc-400 text-base leading-relaxed lowercase">
+              <p className="text-zinc-600 dark:text-zinc-400 text-lg leading-relaxed lowercase">
                 choose your preferred font for the typing interface. monospace fonts are recommended for coding practice.
               </p>
             </div>
@@ -161,16 +161,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
       case 'donations':
         return (
-          <div className="space-y-10">
-            <div className="space-y-4">
+          <div className="space-y-12">
+            <div className="space-y-6">
               <div className="flex items-center space-x-4">
-                <Heart className="w-6 h-6 text-red-500" />
-                <h3 className="text-xl font-semibold text-zinc-900 dark:text-white lowercase">
+                <Heart className="w-7 h-7 text-red-500" />
+                <h3 className="text-2xl font-semibold text-zinc-900 dark:text-white lowercase">
                   support typrr
                 </h3>
               </div>
               
-              <p className="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed lowercase">
+              <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed lowercase">
                 help keep typrr fast, clean, and ad-free forever. every contribution helps maintain the servers and improve the experience for everyone.
               </p>
             </div>
@@ -259,16 +259,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
       case 'discord':
         return (
-          <div className="space-y-10">
-            <div className="space-y-4">
+          <div className="space-y-12">
+            <div className="space-y-6">
               <div className="flex items-center space-x-4">
-                <MessageCircle className="w-6 h-6 text-indigo-500" />
-                <h3 className="text-xl font-semibold text-zinc-900 dark:text-white lowercase">
+                <MessageCircle className="w-7 h-7 text-indigo-500" />
+                <h3 className="text-2xl font-semibold text-zinc-900 dark:text-white lowercase">
                   join our community
                 </h3>
               </div>
               
-              <p className="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed lowercase">
+              <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed lowercase">
                 connect with other developers, share typing tips, get help, and chat about coding. our community is friendly, active, and always ready to help.
               </p>
             </div>
@@ -341,16 +341,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
       case 'about':
         return (
-          <div className="space-y-10">
-            <div className="space-y-4">
+          <div className="space-y-12">
+            <div className="space-y-6">
               <div className="flex items-center space-x-4">
-                <Info className="w-6 h-6 text-blue-500" />
-                <h3 className="text-xl font-semibold text-zinc-900 dark:text-white lowercase">
+                <Info className="w-7 h-7 text-blue-500" />
+                <h3 className="text-2xl font-semibold text-zinc-900 dark:text-white lowercase">
                   about typrr
                 </h3>
               </div>
               
-              <p className="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed lowercase">
+              <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed lowercase">
                 typrr is a modern typing practice platform designed specifically for developers. 
                 improve your coding speed and accuracy with real code snippets from popular programming languages.
               </p>
@@ -465,7 +465,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[1000px] max-w-[90vw] h-[700px] max-h-[85vh] mx-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 p-0 overflow-hidden rounded-2xl shadow-2xl">
+      <DialogContent className="w-[1100px] max-w-[92vw] h-[750px] max-h-[88vh] mx-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 p-0 overflow-hidden rounded-2xl shadow-2xl">
         <DialogHeader className="px-12 py-4 border-b border-zinc-200 dark:border-zinc-700 bg-white/60 dark:bg-zinc-950/60 mb-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-2xl font-semibold text-zinc-900 dark:text-white lowercase tracking-wide leading-tight ml-4 mt-1">
@@ -482,8 +482,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         <div className="flex h-[calc(100%-72px)]">
           {/* Left Sidebar - Tabs */}
-          <div className="w-72 bg-zinc-50/80 dark:bg-zinc-800/30 border-r border-zinc-200 dark:border-zinc-700 p-6">
-            <nav className="space-y-3">
+          <div className="w-80 bg-zinc-50/80 dark:bg-zinc-800/30 border-r border-zinc-200 dark:border-zinc-700 p-8">
+            <nav className="space-y-4">
               {tabs.map((tab) => {
                 const IconComponent = tab.icon;
                 return (
@@ -491,14 +491,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={cn(
-                      "w-full flex items-center space-x-4 px-4 py-4 rounded-xl text-base font-medium transition-all duration-200 text-left group",
+                      "w-full flex items-center space-x-5 px-6 py-5 rounded-xl text-lg font-medium transition-all duration-200 text-left group",
                       activeTab === tab.id
                         ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-md border border-zinc-200 dark:border-zinc-600"
                         : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-zinc-700/40 hover:shadow-sm"
                     )}
                   >
                     <IconComponent className={cn(
-                      "w-5 h-5 transition-colors duration-200",
+                      "w-6 h-6 transition-colors duration-200",
                       activeTab === tab.id 
                         ? "text-current" 
                         : "text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300"
@@ -519,8 +519,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Right Content Area */}
-          <div className="flex-1 p-8 overflow-y-auto bg-gradient-to-br from-white/50 to-zinc-50/50 dark:from-zinc-900/50 dark:to-zinc-800/30">
-            <div className="max-w-2xl">
+          <div className="flex-1 p-10 overflow-y-auto bg-gradient-to-br from-white/50 to-zinc-50/50 dark:from-zinc-900/50 dark:to-zinc-800/30">
+            <div className="max-w-3xl">
               {renderTabContent()}
             </div>
           </div>
