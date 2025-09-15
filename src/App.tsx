@@ -105,11 +105,18 @@ function App() {
         
         if (response.ok) {
           const data = await response.json();
-          console.log('🔍 Received snippet:', data.snippet.language, 'ID:', data.snippet.id);
-          const normalizedContent = normalizeSnippetContent(data.snippet.content);
-          setSnippetContent(normalizedContent);
-          setSnippetId(data.snippet.id);
-          setSnippetLanguage(data.snippet.language);
+          console.log('🔍 Received snippet:', data.snippet?.language, 'ID:', data.snippet?.id);
+          
+          // Check if snippet and content exist before processing
+          if (data.snippet && data.snippet.content) {
+            const normalizedContent = normalizeSnippetContent(data.snippet.content);
+            setSnippetContent(normalizedContent);
+            setSnippetId(data.snippet.id);
+            setSnippetLanguage(data.snippet.language);
+          } else {
+            console.error('❌ Snippet data is incomplete:', data);
+            setApiError('Received incomplete snippet data from server');
+          }
         } else {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           setApiError(`API ${endpoint} failed: ${errorData.error}`);
