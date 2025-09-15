@@ -465,7 +465,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[1100px] max-w-[92vw] h-[750px] max-h-[88vh] mx-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 p-0 overflow-hidden rounded-2xl shadow-2xl">
+      <DialogContent className="w-[1000px] max-w-[90vw] h-[700px] max-h-[85vh] mx-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 p-0 overflow-hidden rounded-2xl shadow-2xl">
         <DialogHeader className="px-12 py-4 border-b border-zinc-200 dark:border-zinc-700 bg-white/60 dark:bg-zinc-950/60 mb-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-2xl font-semibold text-zinc-900 dark:text-white lowercase tracking-wide leading-tight ml-4 mt-1">
